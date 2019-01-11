@@ -47,6 +47,7 @@ func (c MyController) createStuff(ctx restimator.HTTPContext) {
 }
 
 func (c MyController) Load(router *restimator.Router) {
+    c.DB = router.DB
     r := router.NewAPIRouter("/stuff")
     r.Get("/", c.getStuff)
     r.Post("/", c.createStuff)
