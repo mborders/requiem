@@ -26,17 +26,12 @@ func (s *Server) Start() {
 	}
 
 	// Create API router and load controllers
-	r := NewRouter("/api")
-
-	for _, c := range s.Controllers {
-		r.Load(c, db)
-	}
-
+	r := NewRouter("/api", db, s.Controllers)
 	r.PrintRoutes()
 
 	// Create HTTP server using API router
 	srv := &http.Server{
-		Handler: r.Router,
+		Handler: r.MuxRouter,
 		Addr:    fmt.Sprintf(":%s", s.Port),
 	}
 
