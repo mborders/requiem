@@ -31,14 +31,25 @@ type Response struct {
     Message string
 }
 
-func (c MyController) getStuff(w http.ResponseWriter, r *http.Request) {
+type CreateRequest struct {
+    SomeValue string
+}
+
+func (c MyController) getStuff(ctx restimator.HTTPContext) {
     m := Response{Message: "Hello, world!"}
-    restimator.SendJSON(w, res)
+    ctx.SendJSON(res)
+}
+
+func (c MyController) createStuff(ctx restimator.HTTPContext) {
+    m := ctx.Body.(*SomeValue)
+    fmt.Println("Value: %s", m.SomeValue)
+    ctx.SendStatus(Http.StatusNoContent)
 }
 
 func (c MyController) Load(router *restimator.Router) {
     r := router.NewAPIRouter("/stuff")
     r.Get("/", c.getStuff)
+    r.Post("/", c.createStuff)
 }
 ```
 
