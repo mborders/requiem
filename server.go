@@ -9,7 +9,7 @@ import (
 
 // Server represents a REST API server container
 type Server struct {
-	Port        string
+	Port        int
 	Controllers []IHttpController
 	EnableDB    bool
 }
@@ -32,9 +32,9 @@ func (s *Server) Start() {
 	// Create HTTP server using API router
 	srv := &http.Server{
 		Handler: r.MuxRouter,
-		Addr:    fmt.Sprintf(":%s", s.Port),
+		Addr:    fmt.Sprintf(":%d", s.Port),
 	}
 
-	Logger.Info("Starting server on port %s", s.Port)
+	Logger.Info("Starting server on port %d", s.Port)
 	Logger.Fatal(srv.ListenAndServe().Error())
 }
