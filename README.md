@@ -22,7 +22,7 @@ s.Start()
 ## HttpController example
 ```go
 type MyController struct {
-	DB *gorm.DB
+    DB *gorm.DB
 }
 
 type Response struct {
@@ -36,7 +36,7 @@ func (c MyController) getStuff(w http.ResponseWriter, r *http.Request) {
 
 func (c MyController) Load(router *mux.Router, db *gorm.DB) {
     r := restimator.router.PathPrefix("/stuff").Subrouter()
-	r.HandleFunc("/", c.getStuff).Methods(http.MethodGet)
+    r.HandleFunc("/", c.getStuff).Methods(http.MethodGet)
 }
 ```
 
