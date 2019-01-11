@@ -41,7 +41,7 @@ func (c MyController) getStuff(ctx restimator.HTTPContext) {
 }
 
 func (c MyController) createStuff(ctx restimator.HTTPContext) {
-    m := ctx.Body.(*SomeValue)
+    m := ctx.Body.(*CreateRequest)
     fmt.Println("Value: %s", m.SomeValue)
     ctx.SendStatus(Http.StatusNoContent)
 }
