@@ -36,9 +36,9 @@ func (c MyController) getStuff(w http.ResponseWriter, r *http.Request) {
     restimator.SendJSON(w, res)
 }
 
-func (c MyController) Load(router *mux.Router, db *gorm.DB) {
-    r := restimator.router.PathPrefix("/stuff").Subrouter()
-    r.HandleFunc("/", c.getStuff).Methods(http.MethodGet)
+func (c MyController) Load(router *restimator.Router) {
+    r := router.NewAPIRouter("/stuff")
+    r.Get("/", c.getStuff)
 }
 ```
 
