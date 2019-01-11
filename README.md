@@ -1,3 +1,5 @@
+[![GoDoc](http://godoc.org/github.com/borderstech/restimator?status.png)](http://godoc.org/github.com/borderstech/restimator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/borderstech/restimator)](https://goreportcard.com/report/github.com/borderstech/restimator)
 
 # restimator
 
