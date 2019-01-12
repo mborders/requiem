@@ -54,8 +54,8 @@ func (r *Router) PrintRoutes() {
 	Logger.Info("===============================================================")
 }
 
-// NewRouter initializes a new router starting at the given path
-func NewRouter(path string, db *gorm.DB, controllers []IHttpController) *Router {
+// newRouter initializes a new router starting at the given path
+func newRouter(path string, db *gorm.DB, controllers []IHttpController) *Router {
 	mr := mux.NewRouter().PathPrefix(path).Subrouter()
 	r := &Router{MuxRouter: mr, DB: db}
 	r.load(controllers)

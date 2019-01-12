@@ -26,7 +26,7 @@ func (s *Server) Start() {
 	}
 
 	// Create API router and load controllers
-	r := NewRouter("/api", db, s.controllers)
+	r := newRouter("/api", db, s.controllers)
 	r.PrintRoutes()
 
 	// Create HTTP server using API router
