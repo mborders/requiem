@@ -19,14 +19,14 @@ s.Start()
 
 ### With DB
 ```go
-s := requiem.NewServerWithDB(... controllers)
+s := requiem.NewServer(... controllers)
 s.EnableDB = true
 s.Start()
 ```
 
 ### Change port or base path
 ```go
-s := requiem.NewServerWithDB(... controllers)
+s := requiem.NewServer(... controllers)
 s.Port = 9090
 s.BasePath = "/rest"
 s.Start()
