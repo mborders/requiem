@@ -32,7 +32,7 @@ func (r *Router) load(controllers []IHttpController) {
 }
 
 // PrintRoutes logs all of the router's registered paths
-func (r *Router) PrintRoutes() {
+func (r *Router) printRoutes() {
 	Logger.Info("====== API Routes =============================================")
 
 	r.MuxRouter.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
