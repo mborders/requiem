@@ -1,4 +1,4 @@
-package restimator
+package requiem
 
 import (
 	"fmt"

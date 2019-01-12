@@ -1,4 +1,4 @@
-module github.com/borderstech/restimator
+module github.com/borderstech/requiem
 
 require (
 	cloud.google.com/go v0.34.0 // indirect
