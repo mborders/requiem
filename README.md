@@ -11,13 +11,24 @@ Mux-based REST API server container with Postgres support
 Documentation here: https://godoc.org/github.com/borderstech/requiem
 
 ## Example Usage
+### Without DB
 ```go
-s := requiem.Server{
-    Port: 8080,
-    Controllers: [ ... IHttpController ],
-    EnableDB: true
-}
+s := requiem.NewServer(... controllers)
+s.Start()
+```
 
+### With DB
+```go
+s := requiem.NewServerWithDB(... controllers)
+s.EnableDB = true
+s.Start()
+```
+
+### Change port or base path
+```go
+s := requiem.NewServerWithDB(... controllers)
+s.Port = 9090
+s.BasePath = "/rest"
 s.Start()
 ```
 
