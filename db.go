@@ -27,9 +27,9 @@ func loadDBConfig() dbConfig {
 	return cfg
 }
 
-// NewDBConnection obtains DB connection details from environment variables
+// newDBConnection obtains DB connection details from environment variables
 // and initializes the DB connection.
-func NewDBConnection() *gorm.DB {
+func newDBConnection() *gorm.DB {
 	cfg := loadDBConfig()
 	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName))

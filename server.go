@@ -21,7 +21,7 @@ func (s *Server) Start() {
 
 	var db *gorm.DB
 	if s.enableDB {
-		db = NewDBConnection()
+		db = newDBConnection()
 		defer db.Close()
 	}
 
