@@ -1,4 +1,5 @@
 [![GoDoc](http://godoc.org/github.com/borderstech/requiem?status.png)](http://godoc.org/github.com/borderstech/requiem)
+[![Build Status](https://travis-ci.org/borderstech/requiem.svg?branch=master)](https://travis-ci.org/borderstech/requiem)
 [![Go Report Card](https://goreportcard.com/badge/github.com/borderstech/requiem)](https://goreportcard.com/report/github.com/borderstech/requiem)
 
 # requiem

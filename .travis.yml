@@ -11,4 +11,8 @@ script:
   - go test -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
-- bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash)
+
+notifications:
+  slack:
+    secure: aaVNL9eY4gTD9+8kfWW0KpRZJpnX5Dyxdgk3EshNbme4HjeKuEyjER/vFvWlw59b6P/uBcHynODj3D2aXzr64QOrZBnLRxBv3PPICfsgu1JVG9eRHljDWdz1db77oubQxca88/CBM1OAIMEHt+TcaLTV2dpkY74NyrdzDmS51LQHSQSwKI+HyNb1p+cYBdqWiDgQ82fGum/9Yy9Am264OVvsmPR6Oj2PaQ1EeEavox8+wyEhcjbXyqzw8ZXogV6dVxi82xMRozBVz0RWg+Tw08lYn8P5jSR3zXRb1LWh44STUVJyJTWMJ8Z5JC4TghTlw9sX/a1R7Ng9X3KcTk9in6Frz0jW8h1zsNE4vKCt4DvBhJJXZAz7oblnZmtcaJ1Km833qen3yhxqQxPpARuXa0c1Jo4JyuYPCpwZzex9sDhrfohKa8fwqLNKAUmDarqdgUSx9bZIWaG9UAF+vjOfxaEifpvZu6kZnezFl/Vr/xbcIds/dqVR4WwDKMbOne6qUqwa53JWWE7GyjHZphhJM550s8HdsNwMlWkrRIVORnQmi5C82wY8Mf/vfRpXwApqeD4FSprG6PSv2evj2S0Hlu8IF0y15Kg8JupiQ/VHsbmbHeQ9QNp4zDkCMihP4342SIfD6mrp3+c1MIqu6IACUBCvFB+6ELuCkXYH1EK9t8s=
