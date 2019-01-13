@@ -16,11 +16,6 @@ type HTTPContext struct {
 	Body     interface{}
 }
 
-// ReadJSON decodes the request body into the given interface.
-func (ctx *HTTPContext) ReadJSON(v interface{}) interface{} {
-	return ReadJSON(ctx.Request.Body, v)
-}
-
 // SendJSON converts the given interface into JSON and writes to the response.
 func (ctx *HTTPContext) SendJSON(v interface{}) {
 	SendJSON(ctx.Response, v)
