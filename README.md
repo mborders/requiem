@@ -5,7 +5,7 @@
 
 # requiem
 
-Mux-based REST API server container with Postgres support
+Controller-based REST API server container for Golang with Postgres support
 - Uses GORM for DB interaction with Postgres
 - Uses Gorilla Mux for routing
 - Uses logmatic for nice server logs
