@@ -15,7 +15,7 @@ type TestController struct {
 }
 
 type TestRequest struct {
-	Message string
+	Message string `validate:"required"`
 }
 
 func (c TestController) Load(router *Router) {
@@ -43,6 +43,11 @@ func (c TestController) Load(router *Router) {
 		ctx.SendJSON(req)
 	}, TestRequest{})
 
+	r.Put("/put", func(ctx HTTPContext) {
+		req := ctx.Body.(*TestRequest)
+		ctx.SendJSON(req)
+	}, TestRequest{})
+
 	r.Delete("/delete", func(ctx HTTPContext) {
 		req := ctx.Body.(*TestRequest)
 		ctx.SendJSON(req)
@@ -63,6 +68,7 @@ func TestNewServer(t *testing.T) {
 	assertGet(t)
 	assertParam(t)
 	assertPost(t)
+	assertPostBadBody(t)
 	assertPostNoBody(t)
 	assertPut(t)
 	assertDelete(t)
@@ -100,6 +106,16 @@ func assertPost(t *testing.T) {
 	var result TestRequest
 	json.NewDecoder(res.Body).Decode(&result)
 	assert.Equal(t, m, result.Message, "POST should have expected body")
+}
+
+func assertPostBadBody(t *testing.T) {
+	// Verify endpoint post
+	b, _ := json.Marshal(TestRequest{Message: ""})
+	res, _ := http.Post("http://localhost:8080/api/test/post", "application/json", bytes.NewReader(b))
+
+	var result TestRequest
+	json.NewDecoder(res.Body).Decode(&result)
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode, "POST with invalid body should have bad request status")
 }
 
 func assertPostNoBody(t *testing.T) {
