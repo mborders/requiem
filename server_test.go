@@ -34,6 +34,10 @@ func (c TestController) Load(router *Router) {
 		ctx.SendJSON(req)
 	}, TestRequest{})
 
+	r.Post("/post_no_body", func(ctx HTTPContext) {
+		ctx.SendStatus(http.StatusAccepted)
+	}, nil)
+
 	r.Put("/put", func(ctx HTTPContext) {
 		req := ctx.Body.(*TestRequest)
 		ctx.SendJSON(req)
@@ -43,6 +47,10 @@ func (c TestController) Load(router *Router) {
 		req := ctx.Body.(*TestRequest)
 		ctx.SendJSON(req)
 	}, TestRequest{})
+
+	r.Delete("/delete_no_body", func(ctx HTTPContext) {
+		ctx.SendStatus(http.StatusAccepted)
+	}, nil)
 }
 
 func TestNewServer(t *testing.T) {
@@ -55,8 +63,10 @@ func TestNewServer(t *testing.T) {
 	assertGet(t)
 	assertParam(t)
 	assertPost(t)
+	assertPostNoBody(t)
 	assertPut(t)
 	assertDelete(t)
+	assertDeleteNoBody(t)
 }
 
 func assertGet(t *testing.T) {
@@ -83,6 +93,15 @@ func assertPost(t *testing.T) {
 	var result TestRequest
 	json.NewDecoder(res.Body).Decode(&result)
 	assert.Equal(t, m, result.Message, "POST should have expected body")
+}
+
+func assertPostNoBody(t *testing.T) {
+	// Verify endpoint post_no_body
+	req, _ := http.NewRequest("POST", "http://localhost:8080/api/test/post_no_body", nil)
+
+	client := &http.Client{}
+	res, _ := client.Do(req)
+	assert.Equal(t, http.StatusAccepted, res.StatusCode, "POST no body should have expected status")
 }
 
 func assertPut(t *testing.T) {
@@ -113,4 +132,13 @@ func assertDelete(t *testing.T) {
 	var result TestRequest
 	json.NewDecoder(res.Body).Decode(&result)
 	assert.Equal(t, m, result.Message, "DELETE should have expected body")
+}
+
+func assertDeleteNoBody(t *testing.T) {
+	// Verify endpoint delete_no_body
+	req, _ := http.NewRequest("DELETE", "http://localhost:8080/api/test/delete_no_body", nil)
+
+	client := &http.Client{}
+	res, _ := client.Do(req)
+	assert.Equal(t, http.StatusAccepted, res.StatusCode, "DELETE no body should have expected status")
 }
