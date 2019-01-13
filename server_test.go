@@ -69,6 +69,13 @@ func TestNewServer(t *testing.T) {
 	assertDeleteNoBody(t)
 }
 
+func TestNewServer_EnableDB(t *testing.T) {
+	s := NewServer()
+	s.Port = 8081
+	s.EnableDB = true
+	go s.Start()
+}
+
 func assertGet(t *testing.T) {
 	// Verify endpoint get
 	res, _ := http.Get("http://localhost:8080/api/test/get")
