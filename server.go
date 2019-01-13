@@ -12,8 +12,6 @@ const (
 	defaultBasePath = "/api"
 )
 
-var ExitOnFatal = true
-
 // Server represents a REST API server container
 // Default port is 8080
 // Default path is /api
@@ -22,13 +20,14 @@ type Server struct {
 	BasePath    string
 	controllers []IHttpController
 	EnableDB    bool
+	ExitOnFatal bool
 }
 
 // Start initializes the API and starts running on the specified port
 // Blocks on current thread
 func (s *Server) Start() {
 	// Create logger
-	InitLogger()
+	InitLogger(s.ExitOnFatal)
 
 	var db *gorm.DB
 	if s.EnableDB {
@@ -56,6 +55,7 @@ func NewServer(controllers ...IHttpController) *Server {
 		Port:        defaultPort,
 		BasePath:    defaultBasePath,
 		EnableDB:    false,
+		ExitOnFatal: true,
 		controllers: controllers,
 	}
 }

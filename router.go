@@ -72,11 +72,7 @@ func (r *APIRouter) handleFunc(method string, path string, handle func(HTTPConte
 
 func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPContext), v interface{}) {
 	if v == nil {
-		if ExitOnFatal {
-			Logger.Fatal("[%s] %s => Body interface cannot be nil", method, path)
-		} else {
-			Logger.Error("FATAL [%s] %s => Body interface cannot be nil", method, path)
-		}
+		Logger.Fatal("[%s] %s => Body interface cannot be nil", method, path)
 	}
 
 	r.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

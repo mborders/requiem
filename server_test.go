@@ -70,7 +70,6 @@ func (c InvalidController) Load(router *Router) {
 }
 
 func TestNewServer(t *testing.T) {
-	ExitOnFatal = true
 	s := NewServer(TestController{})
 	go s.Start()
 
@@ -88,10 +87,10 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestNewServer_EnableDB(t *testing.T) {
-	ExitOnFatal = false
 	s := NewServer()
 	s.Port = 8081
 	s.EnableDB = true
+	s.ExitOnFatal = false
 	go s.Start()
 
 	timer := time.NewTimer(time.Millisecond * 100)
@@ -99,9 +98,9 @@ func TestNewServer_EnableDB(t *testing.T) {
 }
 
 func TestNewServer_InvalidController(t *testing.T) {
-	ExitOnFatal = false
 	s := NewServer(InvalidController{})
 	s.Port = 8082
+	s.ExitOnFatal = false
 	go s.Start()
 
 	timer := time.NewTimer(time.Millisecond * 100)

@@ -6,7 +6,8 @@ import "github.com/borderstech/logmatic"
 var Logger *logmatic.Logger
 
 // InitLogger initializes the application-wide logger
-func InitLogger() {
+func InitLogger(exitOnFatal bool) {
 	// Create logger
 	Logger = logmatic.NewLogger()
+	Logger.ExitOnFatal = exitOnFatal
 }
