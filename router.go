@@ -41,11 +41,7 @@ func (r *Router) printRoutes() {
 			return nil
 		}
 
-		t, err := route.GetPathTemplate()
-		if err != nil {
-			return err
-		}
-
+		t, _ := route.GetPathTemplate()
 		Logger.Info("Mapped %6s => %s", s[0], t)
 
 		return nil
