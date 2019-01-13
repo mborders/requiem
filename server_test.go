@@ -58,7 +58,19 @@ func (c TestController) Load(router *Router) {
 	}, nil)
 }
 
+type InvalidController struct {
+}
+
+func (c InvalidController) Load(router *Router) {
+	r := router.NewAPIRouter("/invalid")
+	r.Put("/put_invalid", func(ctx HTTPContext) {
+		req := ctx.Body.(*TestRequest)
+		ctx.SendJSON(req)
+	}, nil)
+}
+
 func TestNewServer(t *testing.T) {
+	ExitOnFatal = true
 	s := NewServer(TestController{})
 	go s.Start()
 
@@ -76,10 +88,24 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestNewServer_EnableDB(t *testing.T) {
+	ExitOnFatal = false
 	s := NewServer()
 	s.Port = 8081
 	s.EnableDB = true
 	go s.Start()
+
+	timer := time.NewTimer(time.Millisecond * 100)
+	<-timer.C
+}
+
+func TestNewServer_InvalidController(t *testing.T) {
+	ExitOnFatal = false
+	s := NewServer(InvalidController{})
+	s.Port = 8082
+	go s.Start()
+
+	timer := time.NewTimer(time.Millisecond * 100)
+	<-timer.C
 }
 
 func assertGet(t *testing.T) {

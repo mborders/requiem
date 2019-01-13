@@ -12,6 +12,8 @@ const (
 	defaultBasePath = "/api"
 )
 
+var ExitOnFatal = true
+
 // Server represents a REST API server container
 // Default port is 8080
 // Default path is /api

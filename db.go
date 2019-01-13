@@ -21,7 +21,11 @@ func loadDBConfig() dbConfig {
 	cfg := dbConfig{}
 	err := env.Parse(&cfg)
 	if err != nil {
-		Logger.Fatal("Could not load DB config: %s", err.Error())
+		if ExitOnFatal {
+			Logger.Fatal("Could not load DB config: %s", err.Error())
+		} else {
+			Logger.Error("FATAL Could not load DB config: %s", err.Error())
+		}
 	}
 
 	return cfg
@@ -34,7 +38,11 @@ func newDBConnection() *gorm.DB {
 	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName))
 	if err != nil {
-		Logger.Fatal("Could not connect to DB %s", err)
+		if ExitOnFatal {
+			Logger.Fatal("Could not connect to DB %s", err)
+		} else {
+			Logger.Error("FATAL Could not connect to DB %s", err)
+		}
 	}
 
 	return db
