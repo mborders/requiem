@@ -15,6 +15,7 @@ type dbConfig struct {
 	Username     string `env:"DB_USERNAME"`
 	Password     string `env:"DB_PASSWORD"`
 	DatabaseName string `env:"DB_NAME"`
+	SSLMode      string `env:"DB_SSL_MODE" envDefault:"disable"`
 }
 
 func loadDBConfig() dbConfig {
@@ -31,8 +32,8 @@ func loadDBConfig() dbConfig {
 // and initializes the DB connection.
 func newDBConnection() *gorm.DB {
 	cfg := loadDBConfig()
-	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName))
+	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName, cfg.SSLMode))
 	if err != nil {
 		Logger.Fatal("Could not connect to DB %s", err)
 	}
