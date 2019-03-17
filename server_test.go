@@ -56,6 +56,27 @@ func (c TestController) Load(router *Router) {
 	r.Delete("/delete_no_body", func(ctx HTTPContext) {
 		ctx.SendStatus(http.StatusAccepted)
 	}, nil)
+
+	r.Get("/good_interceptor", func(ctx HTTPContext) {
+		ctx.SendStatus(http.StatusOK)
+	}, func(ctx HTTPContext) bool {
+		return true
+	})
+
+	r.Get("/bad_interceptor", func(ctx HTTPContext) {
+		ctx.SendStatus(http.StatusOK)
+	}, func(ctx HTTPContext) bool {
+		ctx.SendStatus(http.StatusUnauthorized)
+		return false
+	})
+
+	r.Get("/attr_interceptor", func(ctx HTTPContext) {
+		ctx.SendJSON(ctx.GetAttribute("SomeAttr"))
+	}, func(ctx HTTPContext) bool {
+		r := TestRequest{Message: "This is an attribute"}
+		ctx.SetAttribute("SomeAttr", r)
+		return true
+	})
 }
 
 type InvalidController struct {
@@ -84,6 +105,9 @@ func TestNewServer(t *testing.T) {
 	assertPut(t)
 	assertDelete(t)
 	assertDeleteNoBody(t)
+	assertGoodInterceptor(t)
+	assertBadInterceptor(t)
+	assertAttributeInterceptor(t)
 }
 
 func TestNewServer_EnableDB(t *testing.T) {
@@ -189,4 +213,25 @@ func assertDeleteNoBody(t *testing.T) {
 	client := &http.Client{}
 	res, _ := client.Do(req)
 	assert.Equal(t, http.StatusAccepted, res.StatusCode, "DELETE no body should have expected status")
+}
+
+func assertGoodInterceptor(t *testing.T) {
+	// Verify endpoint good_interceptor
+	res, _ := http.Get("http://localhost:8080/api/test/good_interceptor")
+	assert.Equal(t, http.StatusOK, res.StatusCode, "Good interceptor should return 200 status")
+}
+
+func assertBadInterceptor(t *testing.T) {
+	// Verify endpoint bad_interceptor
+	res, _ := http.Get("http://localhost:8080/api/test/bad_interceptor")
+	assert.Equal(t, http.StatusUnauthorized, res.StatusCode, "Bad interceptor should return 401 status")
+}
+
+func assertAttributeInterceptor(t *testing.T) {
+	// Verify endpoint attr_interceptor
+	res, _ := http.Get("http://localhost:8080/api/test/attr_interceptor")
+
+	var result TestRequest
+	json.NewDecoder(res.Body).Decode(&result)
+	assert.Equal(t, "This is an attribute", result.Message, "Attribute interceptor should return expected attribute body")
 }

@@ -60,13 +60,17 @@ func newRouter(path string, db *gorm.DB, controllers []IHttpController) *Router 
 
 // HandleFunc wraps the router HandleFunc to inject an HTTPContext for use
 // by subsequent handlers.
-func (r *APIRouter) handleFunc(method string, path string, handle func(HTTPContext)) {
+func (r *APIRouter) handleFunc(method string, path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
 	r.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		handle(HTTPContext{Request: r, Response: w})
+		ctx := HTTPContext{Request: r, Response: w, attributes: make(map[string]interface{})}
+
+		if processInterceptors(interceptors, ctx) {
+			handle(ctx)
+		}
 	}).Methods(method)
 }
 
-func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPContext), v interface{}) {
+func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
 		Logger.Fatal("[%s] %s => Body interface cannot be nil", method, path)
 	}
@@ -79,7 +83,11 @@ func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPC
 			return
 		}
 
-		handle(HTTPContext{Request: r, Response: w, Body: b})
+		ctx := HTTPContext{Request: r, Response: w, Body: b, attributes: make(map[string]interface{})}
+
+		if processInterceptors(interceptors, ctx) {
+			handle(ctx)
+		}
 	}).Methods(method)
 }
 
@@ -89,29 +97,41 @@ func (r *Router) NewAPIRouter(path string) *APIRouter {
 }
 
 // Get handles GET HTTP requests for the given path
-func (r *APIRouter) Get(path string, handle func(HTTPContext)) {
-	r.handleFunc(http.MethodGet, path, handle)
+func (r *APIRouter) Get(path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
+	r.handleFunc(http.MethodGet, path, handle, interceptors...)
 }
 
 // Post handles POST HTTP requests for the given path
-func (r *APIRouter) Post(path string, handle func(HTTPContext), v interface{}) {
+func (r *APIRouter) Post(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
-		r.handleFunc(http.MethodPost, path, handle)
+		r.handleFunc(http.MethodPost, path, handle, interceptors...)
 	} else {
-		r.handleFuncBody(http.MethodPost, path, handle, v)
+		r.handleFuncBody(http.MethodPost, path, handle, v, interceptors...)
 	}
 }
 
 // Put handles PUT HTTP requests for the given path
-func (r *APIRouter) Put(path string, handle func(HTTPContext), v interface{}) {
-	r.handleFuncBody(http.MethodPut, path, handle, v)
+func (r *APIRouter) Put(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+	r.handleFuncBody(http.MethodPut, path, handle, v, interceptors...)
 }
 
 // Delete handles DELETE HTTP requests for the given path
-func (r *APIRouter) Delete(path string, handle func(HTTPContext), v interface{}) {
+func (r *APIRouter) Delete(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
-		r.handleFunc(http.MethodDelete, path, handle)
+		r.handleFunc(http.MethodDelete, path, handle, interceptors...)
 	} else {
-		r.handleFuncBody(http.MethodDelete, path, handle, v)
+		r.handleFuncBody(http.MethodDelete, path, handle, v, interceptors...)
 	}
+}
+
+func processInterceptors(interceptors []HTTPInterceptor, ctx HTTPContext) bool {
+	for idx := range interceptors {
+		i := interceptors[idx]
+
+		if !i(ctx) {
+			return false
+		}
+	}
+
+	return true
 }
