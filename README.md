@@ -61,11 +61,25 @@ func (c MyController) createStuff(ctx requiem.HTTPContext) {
     ctx.SendStatus(Http.StatusNoContent)
 }
 
+func AuthInterceptor(ctx HTTPContext) bool {
+    // Example:
+    //   1) Check if user is authenticated
+    //   2) Return false if not
+    //   3) Use ctx.SetAttribute() to pass user claim
+    
+    return true
+}
+
 func (c MyController) Load(router *requiem.Router) {
     c.DB = router.DB
     r := router.NewAPIRouter("/stuff")
     r.Get("/", c.getStuff)
     r.Post("/", c.createStuff)
+    
+    // Use AuthInterceptor
+    r.Get("/interceptor", func(ctx HTTPContext) {
+        ctx.SendStatus(http.StatusOK)
+    }, AuthInterceptor)
 }
 ```
 
