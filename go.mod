@@ -2,7 +2,6 @@ module github.com/mborders/requiem
 
 require (
 	cloud.google.com/go v0.34.0 // indirect
-	github.com/mborders/logmatic v0.0.0-20190113143657-d43b0f3c9ded
 	github.com/caarlos0/env v3.4.0+incompatible
 	github.com/denisenkom/go-mssqldb v0.0.0-20181014144952-4e0d7dc8888f // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
@@ -19,7 +18,7 @@ require (
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
-	github.com/stretchr/objx v0.1.1 // indirect
+	github.com/mborders/logmatic v0.0.0-20200818002034-a180b5bd0ead
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190103213133-ff983b9c42bc // indirect
 	golang.org/x/sys v0.0.0-20190109145017-48ac38b7c8cb // indirect
