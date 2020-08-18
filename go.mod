@@ -1,8 +1,8 @@
-module github.com/borderstech/requiem
+module github.com/mborders/requiem
 
 require (
 	cloud.google.com/go v0.34.0 // indirect
-	github.com/borderstech/logmatic v0.0.0-20190113143657-d43b0f3c9ded
+	github.com/mborders/logmatic v0.0.0-20190113143657-d43b0f3c9ded
 	github.com/caarlos0/env v3.4.0+incompatible
 	github.com/denisenkom/go-mssqldb v0.0.0-20181014144952-4e0d7dc8888f // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect

@@ -1,7 +1,7 @@
-[![GoDoc](http://godoc.org/github.com/borderstech/requiem?status.png)](http://godoc.org/github.com/borderstech/requiem)
-[![Build Status](https://travis-ci.org/borderstech/requiem.svg?branch=master)](https://travis-ci.org/borderstech/requiem)
-[![Go Report Card](https://goreportcard.com/badge/github.com/borderstech/requiem)](https://goreportcard.com/report/github.com/borderstech/requiem)
-[![codecov](https://codecov.io/gh/borderstech/requiem/branch/master/graph/badge.svg)](https://codecov.io/gh/borderstech/requiem)
+[![GoDoc](http://godoc.org/github.com/mborders/requiem?status.png)](http://godoc.org/github.com/mborders/requiem)
+[![Build Status](https://travis-ci.org/mborders/requiem.svg?branch=master)](https://travis-ci.org/mborders/requiem)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mborders/requiem)](https://goreportcard.com/report/github.com/mborders/requiem)
+[![codecov](https://codecov.io/gh/mborders/requiem/branch/master/graph/badge.svg)](https://codecov.io/gh/mborders/requiem)
 
 # requiem
 
@@ -12,7 +12,7 @@ Controller-based REST API server container for Golang with Postgres support
 - Default port is 8080
 - Default base path is /api
 
-Documentation here: https://godoc.org/github.com/borderstech/requiem
+Documentation here: https://godoc.org/github.com/mborders/requiem
 
 ## Example Usage
 ### Without DB

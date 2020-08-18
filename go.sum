@@ -1,9 +1,9 @@
 cloud.google.com/go v0.34.0 h1:eOI3/cP2VTU6uZLDYAoic+eyzzB9YyGmJ7eIjl8rOPg=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/borderstech/logmatic v0.0.0-20181107132445-05b75e7fc2f7 h1:Ri2R0A/9Cdfm2bmE9Rlpm95m0x+1Xn+FREnbyzDVC+g=
-github.com/borderstech/logmatic v0.0.0-20181107132445-05b75e7fc2f7/go.mod h1:fnO+wM2nOb03+DF8YAaDA3ctsQS8MXmGqjcuxFBs1Ls=
-github.com/borderstech/logmatic v0.0.0-20190113143657-d43b0f3c9ded h1:5HZwvR+Bx+dEdsNpCJwjlW2KcQ4R4mXpoz62iIlPS+8=
-github.com/borderstech/logmatic v0.0.0-20190113143657-d43b0f3c9ded/go.mod h1:fnO+wM2nOb03+DF8YAaDA3ctsQS8MXmGqjcuxFBs1Ls=
+github.com/mborders/logmatic v0.0.0-20181107132445-05b75e7fc2f7 h1:Ri2R0A/9Cdfm2bmE9Rlpm95m0x+1Xn+FREnbyzDVC+g=
+github.com/mborders/logmatic v0.0.0-20181107132445-05b75e7fc2f7/go.mod h1:fnO+wM2nOb03+DF8YAaDA3ctsQS8MXmGqjcuxFBs1Ls=
+github.com/mborders/logmatic v0.0.0-20190113143657-d43b0f3c9ded h1:5HZwvR+Bx+dEdsNpCJwjlW2KcQ4R4mXpoz62iIlPS+8=
+github.com/mborders/logmatic v0.0.0-20190113143657-d43b0f3c9ded/go.mod h1:fnO+wM2nOb03+DF8YAaDA3ctsQS8MXmGqjcuxFBs1Ls=
 github.com/caarlos0/env v3.4.0+incompatible h1:FRwBdvENjLHZoUbFnULnFss9wKtcapdaM35DfxiTjeM=
 github.com/caarlos0/env v3.4.0+incompatible/go.mod h1:tdCsowwCzMLdkqRYDlHpZCp2UooDD3MspDBjZ2AD02Y=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -1,6 +1,6 @@
 package requiem
 
-import "github.com/borderstech/logmatic"
+import "github.com/mborders/logmatic"
 
 // Logger provides application-wide logging
 var Logger *logmatic.Logger
