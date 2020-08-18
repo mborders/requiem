@@ -6,8 +6,8 @@
 # requiem
 
 Controller-based REST API server container for Golang with Postgres support
-- Uses GORM for DB interaction with Postgres
-- Uses Gorilla Mux for routing
+- Uses [GORM](https://github.com/go-gorm/gorm) for DB interaction with Postgres
+- Uses [Gorilla Mux](https://github.com/gorilla/mux) for routing
 - Uses logmatic for nice server logs
 - Default port is 8080
 - Default base path is /api
