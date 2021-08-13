@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres" // GORM PGSQL dialect
-	_ "github.com/lib/pq"                        // PGSQL driver
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type dbConfig struct {
@@ -32,8 +31,10 @@ func loadDBConfig() dbConfig {
 // and initializes the DB connection.
 func newDBConnection() *gorm.DB {
 	cfg := loadDBConfig()
-	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName, cfg.SSLMode))
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DatabaseName, cfg.SSLMode)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		Logger.Fatal("Could not connect to DB %s", err)
 	}

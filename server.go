@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 const (
@@ -32,7 +32,8 @@ func (s *Server) Start() {
 	var db *gorm.DB
 	if s.EnableDB {
 		db = newDBConnection()
-		defer db.Close()
+		sqlDB, _ := db.DB()
+		defer sqlDB.Close()
 	}
 
 	// Create API router and load controllers

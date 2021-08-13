@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 	validator "gopkg.in/go-playground/validator.v9"
+	"gorm.io/gorm"
 )
 
 // Router maintains routing paths for a single API
