@@ -1,5 +1,5 @@
 [![GoDoc](http://godoc.org/github.com/mborders/requiem?status.png)](http://godoc.org/github.com/mborders/requiem)
-[![Build Status](https://travis-ci.com/mborders/requiem.svg?branch=master)](https://travis-ci.org/mborders/requiem)
+[![Build Status](https://travis-ci.com/mborders/requiem.svg?branch=master)](https://travis-ci.com/mborders/requiem)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mborders/requiem)](https://goreportcard.com/report/github.com/mborders/requiem)
 [![codecov](https://codecov.io/gh/mborders/requiem/branch/master/graph/badge.svg)](https://codecov.io/gh/mborders/requiem)
 
