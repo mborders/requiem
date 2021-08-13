@@ -1,14 +1,14 @@
 [![GoDoc](http://godoc.org/github.com/mborders/requiem?status.png)](http://godoc.org/github.com/mborders/requiem)
-[![Build Status](https://travis-ci.org/mborders/requiem.svg?branch=master)](https://travis-ci.org/mborders/requiem)
+[![Build Status](https://travis-ci.com/mborders/requiem.svg?branch=master)](https://travis-ci.org/mborders/requiem)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mborders/requiem)](https://goreportcard.com/report/github.com/mborders/requiem)
 [![codecov](https://codecov.io/gh/mborders/requiem/branch/master/graph/badge.svg)](https://codecov.io/gh/mborders/requiem)
 
 # requiem
 
 Controller-based REST API server container for Golang with Postgres support
-- Uses [GORM](https://github.com/go-gorm/gorm) for DB interaction with Postgres
-- Uses [Gorilla Mux](https://github.com/gorilla/mux) for routing
-- Uses logmatic for nice server logs
+- Uses [GORM v1.21.13](https://github.com/go-gorm/gorm) for DB interaction with Postgres
+- Uses [Gorilla Mux v1.8.0](https://github.com/gorilla/mux) for routing
+- Uses [logmatic v0.4.0](https://github.com/mborders/logmatic) for nice server logs
 - Default port is 8080
 - Default base path is /api
 
