@@ -8,23 +8,24 @@ import (
 	"gorm.io/gorm"
 )
 
-// Router maintains routing paths for a single API
+// Router maintains routing paths for a single REST API
 type Router struct {
 	MuxRouter *mux.Router
 	DB        *gorm.DB
 }
 
-// IHttpController represents an API that can be loaded into a router
+// IHttpController represents a REST API that can be loaded into a router
 type IHttpController interface {
 	Load(router *Router)
 }
 
-// APIRouter represents a router for a specific API
-type APIRouter struct {
+// RestRouter represents a router for a specific REST API
+type RestRouter struct {
 	router *mux.Router
+	DB     *gorm.DB
 }
 
-// Load adds all of the given API controller routes into the router
+// Load adds all of the given REST controller routes into the router
 func (r *Router) load(controllers []IHttpController) {
 	for _, c := range controllers {
 		c.Load(r)
@@ -33,7 +34,7 @@ func (r *Router) load(controllers []IHttpController) {
 
 // PrintRoutes logs all of the router's registered paths
 func (r *Router) printRoutes() {
-	Logger.Info("====== API Routes =============================================")
+	Logger.Info("====== Routes =============================================")
 
 	r.MuxRouter.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		s, _ := route.GetMethods()
@@ -60,7 +61,7 @@ func newRouter(path string, db *gorm.DB, controllers []IHttpController) *Router 
 
 // HandleFunc wraps the router HandleFunc to inject an HTTPContext for use
 // by subsequent handlers.
-func (r *APIRouter) handleFunc(method string, path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
+func (r *RestRouter) handleFunc(method string, path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
 	r.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		ctx := HTTPContext{Request: r, Response: w, attributes: make(map[string]interface{})}
 
@@ -70,7 +71,7 @@ func (r *APIRouter) handleFunc(method string, path string, handle func(HTTPConte
 	}).Methods(method)
 }
 
-func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) handleFuncBody(method string, path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
 		Logger.Fatal("[%s] %s => Body interface cannot be nil", method, path)
 	}
@@ -91,18 +92,18 @@ func (r *APIRouter) handleFuncBody(method string, path string, handle func(HTTPC
 	}).Methods(method)
 }
 
-// NewAPIRouter initializes a new API router on at the given path
-func (r *Router) NewAPIRouter(path string) *APIRouter {
-	return &APIRouter{router: r.MuxRouter.PathPrefix(path).Subrouter()}
+// NewRestRouter initializes a new REST router on at the given path
+func (r *Router) NewRestRouter(path string) *RestRouter {
+	return &RestRouter{router: r.MuxRouter.PathPrefix(path).Subrouter(), DB: r.DB}
 }
 
 // Get handles GET HTTP requests for the given path
-func (r *APIRouter) Get(path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Get(path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
 	r.handleFunc(http.MethodGet, path, handle, interceptors...)
 }
 
 // Post handles POST HTTP requests for the given path
-func (r *APIRouter) Post(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Post(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
 		r.handleFunc(http.MethodPost, path, handle, interceptors...)
 	} else {
@@ -111,12 +112,12 @@ func (r *APIRouter) Post(path string, handle func(HTTPContext), v interface{}, i
 }
 
 // Put handles PUT HTTP requests for the given path
-func (r *APIRouter) Put(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Put(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	r.handleFuncBody(http.MethodPut, path, handle, v, interceptors...)
 }
 
 // Delete handles DELETE HTTP requests for the given path
-func (r *APIRouter) Delete(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Delete(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
 	if v == nil {
 		r.handleFunc(http.MethodDelete, path, handle, interceptors...)
 	} else {

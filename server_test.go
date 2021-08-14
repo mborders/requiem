@@ -19,7 +19,7 @@ type TestRequest struct {
 }
 
 func (c TestController) Load(router *Router) {
-	r := router.NewAPIRouter("/test")
+	r := router.NewRestRouter("/test")
 	r.Get("/get", func(ctx HTTPContext) {
 		ctx.SendStatus(http.StatusNoContent)
 	})
@@ -83,7 +83,7 @@ type InvalidController struct {
 }
 
 func (c InvalidController) Load(router *Router) {
-	r := router.NewAPIRouter("/invalid")
+	r := router.NewRestRouter("/invalid")
 	r.Put("/put_invalid", func(ctx HTTPContext) {
 		req := ctx.Body.(*TestRequest)
 		ctx.SendJSON(req)
