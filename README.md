@@ -72,7 +72,7 @@ func AuthInterceptor(ctx HTTPContext) bool {
 
 func (c MyController) Load(router *requiem.Router) {
     c.DB = router.DB
-    r := router.NewAPIRouter("/stuff")
+    r := router.NewRestRouter("/stuff")
     r.Get("/", c.getStuff)
     r.Post("/", c.createStuff)
     
