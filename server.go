@@ -18,9 +18,23 @@ const (
 type Server struct {
 	Port        int
 	BasePath    string
-	controllers []IHttpController
-	EnableDB    bool
 	ExitOnFatal bool
+	db          *gorm.DB
+	controllers []IHttpController
+}
+
+func (s *Server) UsePostgresDB() {
+	s.db = newPostgresDBConnection()
+}
+
+func (s *Server) UseInMemoryDB() {
+	s.db = newInMemoryDBConnection()
+}
+
+func (s *Server) AutoMigrate(models ...interface{}) {
+	for idx := range models {
+		s.db.AutoMigrate(models[idx])
+	}
 }
 
 // Start initializes the API and starts running on the specified port
@@ -29,15 +43,13 @@ func (s *Server) Start() {
 	// Create logger
 	InitLogger(s.ExitOnFatal)
 
-	var db *gorm.DB
-	if s.EnableDB {
-		db = newDBConnection()
-		sqlDB, _ := db.DB()
+	if s.db != nil {
+		sqlDB, _ := s.db.DB()
 		defer sqlDB.Close()
 	}
 
 	// Create API router and load controllers
-	r := newRouter(s.BasePath, db, s.controllers)
+	r := newRouter(s.BasePath, s.db, s.controllers)
 	r.printRoutes()
 
 	// Create HTTP server using API router
@@ -55,7 +67,6 @@ func NewServer(controllers ...IHttpController) *Server {
 	return &Server{
 		Port:        defaultPort,
 		BasePath:    defaultBasePath,
-		EnableDB:    false,
 		ExitOnFatal: true,
 		controllers: controllers,
 	}

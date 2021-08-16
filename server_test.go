@@ -110,10 +110,10 @@ func TestNewServer(t *testing.T) {
 	assertAttributeInterceptor(t)
 }
 
-func TestNewServer_EnableDB(t *testing.T) {
+func TestNewServer_UseInMemoryDB(t *testing.T) {
 	s := NewServer()
 	s.Port = 8081
-	s.EnableDB = true
+	s.UseInMemoryDB()
 	s.ExitOnFatal = false
 	go s.Start()
 
