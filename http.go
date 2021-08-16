@@ -27,6 +27,11 @@ func (ctx *HTTPContext) SendStatus(s int) {
 	SendStatus(ctx.Response, s)
 }
 
+// SendJSONWithStatus writes a JSON response body to the response, along with the specified status code.
+func (ctx *HTTPContext) SendJSONWithStatus(v interface{}, s int) {
+	SendJSONWithStatus(ctx.Response, v, s)
+}
+
 // GetParam obtains the given parameter key from the request parameters.
 func (ctx *HTTPContext) GetParam(p string) string {
 	return mux.Vars(ctx.Request)[p]
@@ -59,6 +64,14 @@ func SendJSON(w http.ResponseWriter, v interface{}) {
 // SendStatus writes the given HTTP status code into the provided response stream.
 func SendStatus(w http.ResponseWriter, s int) {
 	w.WriteHeader(s)
+}
+
+// SendJSONWithStatus writes a JSON response body to the provided stream, along with the specified status code.
+func SendJSONWithStatus(w http.ResponseWriter, v interface{}, s int) {
+	w.Header().Add("Content-Type", "application/json")
+	json, _ := json.Marshal(v)
+	w.WriteHeader(s)
+	w.Write(json)
 }
 
 // HTTPInterceptor allows for pre-processing request handlers
