@@ -23,12 +23,12 @@ type Server struct {
 	controllers []IHttpController
 }
 
-func (s *Server) UsePostgresDB() {
-	s.db = newPostgresDBConnection()
+func (s *Server) UsePostgresDB(debugMode bool) {
+	s.db = newPostgresDBConnection(debugMode)
 }
 
-func (s *Server) UseInMemoryDB() {
-	s.db = newInMemoryDBConnection()
+func (s *Server) UseInMemoryDB(debugMode bool) {
+	s.db = newInMemoryDBConnection(debugMode)
 }
 
 func (s *Server) AutoMigrate(models ...interface{}) {

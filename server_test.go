@@ -113,7 +113,7 @@ func TestNewServer(t *testing.T) {
 func TestNewServer_UseInMemoryDB(t *testing.T) {
 	s := NewServer()
 	s.Port = 8081
-	s.UseInMemoryDB()
+	s.UseInMemoryDB(false)
 	s.ExitOnFatal = false
 	go s.Start()
 
