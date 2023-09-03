@@ -16,11 +16,12 @@ const (
 // Default port is 8080
 // Default path is /api
 type Server struct {
-	Port        int
-	BasePath    string
-	ExitOnFatal bool
-	db          *gorm.DB
-	controllers []IHttpController
+	Port               int
+	BasePath           string
+	ExitOnFatal        bool
+	healthcheckEnabled bool
+	db                 *gorm.DB
+	controllers        []IHttpController
 }
 
 func (s *Server) UsePostgresDB(debugMode bool) {
@@ -29,6 +30,13 @@ func (s *Server) UsePostgresDB(debugMode bool) {
 
 func (s *Server) UseInMemoryDB(debugMode bool) {
 	s.db = newInMemoryDBConnection(debugMode)
+}
+
+func (s *Server) UseHealthcheck() {
+	if !s.healthcheckEnabled {
+		s.controllers = append(s.controllers, HealthcheckController{})
+		s.healthcheckEnabled = true
+	}
 }
 
 func (s *Server) AutoMigrate(models ...interface{}) {
