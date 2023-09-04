@@ -48,9 +48,6 @@ func (s *Server) AutoMigrate(models ...interface{}) {
 // Start initializes the API and starts running on the specified port
 // Blocks on current thread
 func (s *Server) Start() {
-	// Create logger
-	InitLogger(s.ExitOnFatal)
-
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
 		defer sqlDB.Close()
@@ -72,10 +69,15 @@ func (s *Server) Start() {
 
 // NewServer creates a route-based REST API server instance
 func NewServer(controllers ...IHttpController) *Server {
-	return &Server{
+	s := Server{
 		Port:        defaultPort,
 		BasePath:    defaultBasePath,
 		ExitOnFatal: true,
 		controllers: controllers,
 	}
+
+	// Create logger
+	InitLogger(s.ExitOnFatal)
+
+	return &s
 }
