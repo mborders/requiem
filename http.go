@@ -37,6 +37,11 @@ func (ctx *HTTPContext) GetParam(p string) string {
 	return mux.Vars(ctx.Request)[p]
 }
 
+// GetQueryParam obtains the given query parameter from the request URL.
+func (ctx *HTTPContext) GetQueryParam(p string) string {
+	return ctx.Request.URL.Query().Get(p)
+}
+
 // GetAttribute returns the context-scoped value for the given key
 func (ctx *HTTPContext) GetAttribute(key string) interface{} {
 	return ctx.attributes[key]

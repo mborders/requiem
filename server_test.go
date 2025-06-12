@@ -29,6 +29,11 @@ func (c TestController) Load(router *Router) {
 		ctx.SendJSON(TestRequest{Message: p})
 	})
 
+	r.Get("/query", func(ctx HTTPContext) {
+		q := ctx.GetQueryParam("message")
+		ctx.SendJSON(TestRequest{Message: q})
+	})
+
 	r.Post("/post", func(ctx HTTPContext) {
 		req := ctx.Body.(*TestRequest)
 		ctx.SendJSON(req)
@@ -99,6 +104,7 @@ func TestNewServer(t *testing.T) {
 
 	assertGet(t)
 	assertParam(t)
+	assertQueryParam(t)
 	assertPost(t)
 	assertPostBadBody(t)
 	assertPostNoBody(t)
@@ -144,6 +150,15 @@ func assertParam(t *testing.T) {
 	res, _ := http.Get(fmt.Sprintf("http://localhost:8080/api/test/param/%s", id))
 	json.NewDecoder(res.Body).Decode(&result)
 	assert.Equal(t, id, result.Message, "Path param should have expected value")
+}
+
+func assertQueryParam(t *testing.T) {
+	// Verify endpoint query param
+	message := "hello"
+	var result TestRequest
+	res, _ := http.Get(fmt.Sprintf("http://localhost:8080/api/test/query?message=%s", message))
+	json.NewDecoder(res.Body).Decode(&result)
+	assert.Equal(t, message, result.Message, "Query param should have expected value")
 }
 
 func assertPost(t *testing.T) {
