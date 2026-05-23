@@ -27,16 +27,17 @@ type OpenAPIConfig struct {
 }
 
 type Route struct {
-	method      string
-	path        string
-	bodyType    reflect.Type
-	summary     string
-	description string
-	tags        []string
-	responses   map[int]responseSpec
-	params      []paramSpec
-	deprecated  bool
-	excluded    bool
+	method       string
+	path         string
+	routerPrefix string
+	bodyType     reflect.Type
+	summary      string
+	description  string
+	tags         []string
+	responses    map[int]responseSpec
+	params       []paramSpec
+	deprecated   bool
+	excluded     bool
 }
 
 type responseSpec struct {
@@ -133,9 +134,15 @@ func (c *openapiController) Load(router *Router) {
 }
 
 // commonRoutePrefix returns the longest path-segment prefix shared by every
-// non-excluded route, or "" if there's no shared prefix. Used to default
-// SpecPath/DocsPath into a service's own URL namespace so the OpenAPI
-// endpoints sit behind the same ingress/path rules as the API itself.
+// non-excluded route's RestRouter prefix, or "" if there's no shared one.
+// Used to default SpecPath/DocsPath into a service's own URL namespace so the
+// OpenAPI endpoints sit behind the same ingress/path rules as the API itself.
+//
+// The prefix is the routers' declared prefix (passed to NewRestRouter), not
+// the longest common path between concrete route paths. This matters for
+// single-route services: a service with one Post("/events") under
+// NewRestRouter("/analytics") should mount its spec at /analytics/openapi.json,
+// not at /analytics/events/openapi.json.
 //
 // Falls back to "" when any route would shadow the spec path under mux's
 // first-match-wins routing (e.g. a /<prefix>/{wildcard} route would absorb
@@ -149,19 +156,19 @@ func commonRoutePrefix(routes []*Route) string {
 		return strings.Split(p, "/")
 	}
 
-	var paths [][]string
+	var prefixSegs [][]string
 	for _, r := range routes {
 		if r.excluded {
 			continue
 		}
-		paths = append(paths, segments(stripPathRegex(r.path)))
+		prefixSegs = append(prefixSegs, segments(r.routerPrefix))
 	}
-	if len(paths) == 0 {
+	if len(prefixSegs) == 0 {
 		return ""
 	}
 
-	common := append([]string(nil), paths[0]...)
-	for _, segs := range paths[1:] {
+	common := append([]string(nil), prefixSegs[0]...)
+	for _, segs := range prefixSegs[1:] {
 		if len(common) > len(segs) {
 			common = common[:len(segs)]
 		}
@@ -182,7 +189,11 @@ func commonRoutePrefix(routes []*Route) string {
 
 	wildcardSeg := regexp.MustCompile(`^\{[^}]+\}$`)
 	targetDepth := len(common) + 1
-	for _, segs := range paths {
+	for _, r := range routes {
+		if r.excluded {
+			continue
+		}
+		segs := segments(stripPathRegex(r.path))
 		if len(segs) == targetDepth && wildcardSeg.MatchString(segs[targetDepth-1]) {
 			return ""
 		}

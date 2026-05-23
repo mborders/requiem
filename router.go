@@ -144,9 +144,10 @@ func (r *RestRouter) register(method, path string, v interface{}) *Route {
 		t = reflect.TypeOf(v)
 	}
 	rt := &Route{
-		method:   method,
-		path:     r.prefix + path,
-		bodyType: t,
+		method:       method,
+		path:         r.prefix + path,
+		routerPrefix: r.prefix,
+		bodyType:     t,
 	}
 	r.parent.routes = append(r.parent.routes, rt)
 	return rt

@@ -309,6 +309,18 @@ func TestCommonRoutePrefix_SharedPrefixNoConflict(t *testing.T) {
 	assert.Equal(t, "/things", commonRoutePrefix(router.routes))
 }
 
+type singleRouteController struct{}
+
+func (c singleRouteController) Load(router *Router) {
+	r := router.NewRestRouter("/analytics")
+	r.Post("/events", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }, nil)
+}
+
+func TestCommonRoutePrefix_SingleRouteUsesRouterPrefix(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{singleRouteController{}})
+	assert.Equal(t, "/analytics", commonRoutePrefix(router.routes))
+}
+
 func TestCommonRoutePrefix_FallsBackOnWildcardConflict(t *testing.T) {
 	router := newRouter("/api", nil, []IHttpController{DocController{}})
 	assert.Equal(t, "", commonRoutePrefix(router.routes))
