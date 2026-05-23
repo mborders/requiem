@@ -47,6 +47,23 @@ func (s *Server) UseOpenAPI(cfg OpenAPIConfig) {
 	}
 }
 
+// GetOpenAPISpec returns the OpenAPI 3.0 spec for the server's routes as JSON
+// bytes without starting an HTTP listener. Controllers are loaded into a
+// throwaway router solely to register their routes. Returns nil if UseOpenAPI
+// was never called.
+func (s *Server) GetOpenAPISpec() []byte {
+	if !s.openapiEnabled {
+		return nil
+	}
+	r := newRouter(s.BasePath, s.db, s.controllers)
+	for _, c := range s.controllers {
+		if oc, ok := c.(*openapiController); ok {
+			return buildDoc(oc.cfg, r.routes)
+		}
+	}
+	return nil
+}
+
 func (s *Server) AutoMigrate(models ...interface{}) {
 	for idx := range models {
 		s.db.AutoMigrate(models[idx])
