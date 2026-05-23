@@ -20,6 +20,7 @@ type Server struct {
 	BasePath           string
 	ExitOnFatal        bool
 	healthcheckEnabled bool
+	openapiEnabled     bool
 	db                 *gorm.DB
 	controllers        []IHttpController
 }
@@ -36,6 +37,13 @@ func (s *Server) UseHealthcheck() {
 	if !s.healthcheckEnabled {
 		s.controllers = append(s.controllers, HealthcheckController{})
 		s.healthcheckEnabled = true
+	}
+}
+
+func (s *Server) UseOpenAPI(cfg OpenAPIConfig) {
+	if !s.openapiEnabled {
+		s.controllers = append(s.controllers, &openapiController{cfg: cfg})
+		s.openapiEnabled = true
 	}
 }
 

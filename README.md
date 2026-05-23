@@ -9,6 +9,7 @@ Controller-based REST API server container for Golang with Postgres support
 - Uses [GORM v1.21.13](https://github.com/go-gorm/gorm) for DB interaction with Postgres
 - Uses [Gorilla Mux v1.8.0](https://github.com/gorilla/mux) for routing
 - Uses [logmatic v0.4.0](https://github.com/mborders/logmatic) for nice server logs
+- Optional OpenAPI 3.0 spec + Swagger UI generated from registered routes
 - Default port is 8080
 - Default base path is /api
 
@@ -82,6 +83,59 @@ func (c MyController) Load(router *requiem.Router) {
     }, AuthInterceptor)
 }
 ```
+
+## OpenAPI / Swagger UI
+
+Enable an auto-generated OpenAPI 3.0 spec and Swagger UI page:
+
+```go
+s := requiem.NewServer(controllers...)
+s.UseOpenAPI(requiem.OpenAPIConfig{
+    Title:   "My API",
+    Version: "1.0.0",
+    Servers: []string{"/api"},
+})
+s.Start()
+```
+
+This mounts:
+- `GET /api/openapi.json` — the OpenAPI 3.0 document (JSON)
+- `GET /api/docs` — Swagger UI rendered against the spec
+
+Paths, methods, and request body schemas are derived automatically from your route registrations. Attach richer metadata by chaining off the returned `*Route`:
+
+```go
+func (c MyController) Load(router *requiem.Router) {
+    r := router.NewRestRouter("/stuff")
+
+    r.Get("/", c.list).
+        Summary("List stuff").
+        Tags("stuff").
+        Query("limit", "integer", false, "Max items").
+        Returns(200, []Stuff{}, "List of stuff")
+
+    r.Post("/", c.create, CreateStuff{}).
+        Summary("Create stuff").
+        Tags("stuff").
+        Returns(201, Stuff{}, "Created").
+        Returns(400, ErrorResponse{}, "Invalid input")
+
+    r.Get("/{id}", c.getOne).
+        Summary("Get one").
+        Param("id", "string", "Stuff identifier").
+        Returns(200, Stuff{}, "OK").
+        Returns(404, ErrorResponse{}, "Not found")
+
+    r.Delete("/internal", c.purge, nil).
+        ExcludeFromSpec()
+}
+```
+
+Request body schemas come from the struct passed to `Post`/`Put`/`Delete` (honors `json:"..."` and `validate:"required,min=,max=,oneof="` tags). Response schemas come from the value passed to `Returns(...)`. Struct types are emitted under `components.schemas` and referenced via `$ref`.
+
+`OpenAPIConfig` defaults:
+- `SpecPath` defaults to `/openapi.json`
+- `DocsPath` defaults to `/docs` (set to `"-"` to disable the Swagger UI page)
 
 ## DB Connection Environment Variables (if DB is enabled)
 ```

@@ -2,6 +2,7 @@ package requiem
 
 import (
 	"net/http"
+	"reflect"
 
 	"github.com/gorilla/mux"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -12,6 +13,7 @@ import (
 type Router struct {
 	MuxRouter *mux.Router
 	DB        *gorm.DB
+	routes    []*Route
 }
 
 // IHttpController represents a REST API that can be loaded into a router
@@ -22,6 +24,8 @@ type IHttpController interface {
 // RestRouter represents a router for a specific REST API
 type RestRouter struct {
 	router *mux.Router
+	parent *Router
+	prefix string
 	DB     *gorm.DB
 }
 
@@ -54,7 +58,7 @@ func (r *Router) printRoutes() {
 // newRouter initializes a new router starting at the given path
 func newRouter(path string, db *gorm.DB, controllers []IHttpController) *Router {
 	mr := mux.NewRouter().PathPrefix(path).Subrouter()
-	r := &Router{MuxRouter: mr, DB: db}
+	r := &Router{MuxRouter: mr, DB: db, routes: []*Route{}}
 	r.load(controllers)
 	return r
 }
@@ -94,35 +98,58 @@ func (r *RestRouter) handleFuncBody(method string, path string, handle func(HTTP
 
 // NewRestRouter initializes a new REST router on at the given path
 func (r *Router) NewRestRouter(path string) *RestRouter {
-	return &RestRouter{router: r.MuxRouter.PathPrefix(path).Subrouter(), DB: r.DB}
+	return &RestRouter{
+		router: r.MuxRouter.PathPrefix(path).Subrouter(),
+		parent: r,
+		prefix: path,
+		DB:     r.DB,
+	}
 }
 
 // Get handles GET HTTP requests for the given path
-func (r *RestRouter) Get(path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Get(path string, handle func(HTTPContext), interceptors ...HTTPInterceptor) *Route {
 	r.handleFunc(http.MethodGet, path, handle, interceptors...)
+	return r.register(http.MethodGet, path, nil)
 }
 
 // Post handles POST HTTP requests for the given path
-func (r *RestRouter) Post(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Post(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) *Route {
 	if v == nil {
 		r.handleFunc(http.MethodPost, path, handle, interceptors...)
 	} else {
 		r.handleFuncBody(http.MethodPost, path, handle, v, interceptors...)
 	}
+	return r.register(http.MethodPost, path, v)
 }
 
 // Put handles PUT HTTP requests for the given path
-func (r *RestRouter) Put(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Put(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) *Route {
 	r.handleFuncBody(http.MethodPut, path, handle, v, interceptors...)
+	return r.register(http.MethodPut, path, v)
 }
 
 // Delete handles DELETE HTTP requests for the given path
-func (r *RestRouter) Delete(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) {
+func (r *RestRouter) Delete(path string, handle func(HTTPContext), v interface{}, interceptors ...HTTPInterceptor) *Route {
 	if v == nil {
 		r.handleFunc(http.MethodDelete, path, handle, interceptors...)
 	} else {
 		r.handleFuncBody(http.MethodDelete, path, handle, v, interceptors...)
 	}
+	return r.register(http.MethodDelete, path, v)
+}
+
+func (r *RestRouter) register(method, path string, v interface{}) *Route {
+	var t reflect.Type
+	if v != nil {
+		t = reflect.TypeOf(v)
+	}
+	rt := &Route{
+		method:   method,
+		path:     r.prefix + path,
+		bodyType: t,
+	}
+	r.parent.routes = append(r.parent.routes, rt)
+	return rt
 }
 
 func processInterceptors(interceptors []HTTPInterceptor, ctx HTTPContext) bool {
