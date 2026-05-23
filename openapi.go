@@ -115,19 +115,80 @@ type openapiController struct {
 func (c *openapiController) Load(router *Router) {
 	c.router = router
 
+	prefix := commonRoutePrefix(router.routes)
+
 	specPath := c.cfg.SpecPath
 	if specPath == "" {
-		specPath = defaultSpecPath
+		specPath = prefix + defaultSpecPath
 	}
 	docsPath := c.cfg.DocsPath
 	if docsPath == "" {
-		docsPath = defaultDocsPath
+		docsPath = prefix + defaultDocsPath
 	}
 
 	router.MuxRouter.HandleFunc(specPath, c.serveSpec).Methods(http.MethodGet)
 	if docsPath != "-" {
 		router.MuxRouter.HandleFunc(docsPath, c.serveDocs(specPath, docsPath)).Methods(http.MethodGet)
 	}
+}
+
+// commonRoutePrefix returns the longest path-segment prefix shared by every
+// non-excluded route, or "" if there's no shared prefix. Used to default
+// SpecPath/DocsPath into a service's own URL namespace so the OpenAPI
+// endpoints sit behind the same ingress/path rules as the API itself.
+//
+// Falls back to "" when any route would shadow the spec path under mux's
+// first-match-wins routing (e.g. a /<prefix>/{wildcard} route would absorb
+// /<prefix>/openapi.json).
+func commonRoutePrefix(routes []*Route) string {
+	segments := func(p string) []string {
+		p = strings.TrimPrefix(p, "/")
+		if p == "" {
+			return nil
+		}
+		return strings.Split(p, "/")
+	}
+
+	var paths [][]string
+	for _, r := range routes {
+		if r.excluded {
+			continue
+		}
+		paths = append(paths, segments(stripPathRegex(r.path)))
+	}
+	if len(paths) == 0 {
+		return ""
+	}
+
+	common := append([]string(nil), paths[0]...)
+	for _, segs := range paths[1:] {
+		if len(common) > len(segs) {
+			common = common[:len(segs)]
+		}
+		for i := range common {
+			if common[i] != segs[i] {
+				common = common[:i]
+				break
+			}
+		}
+		if len(common) == 0 {
+			return ""
+		}
+	}
+
+	if len(common) == 0 {
+		return ""
+	}
+
+	wildcardSeg := regexp.MustCompile(`^\{[^}]+\}$`)
+	targetDepth := len(common) + 1
+	for _, segs := range paths {
+		if len(segs) == targetDepth && wildcardSeg.MatchString(segs[targetDepth-1]) {
+			return ""
+		}
+	}
+
+	return "/" + strings.Join(common, "/")
 }
 
 func (c *openapiController) serveSpec(w http.ResponseWriter, r *http.Request) {

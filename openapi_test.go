@@ -287,6 +287,87 @@ func TestOpenAPI_RouteRegistry(t *testing.T) {
 	assert.Contains(t, got, "DELETE /widgets/{id}")
 }
 
+type nonConflictController struct{}
+
+func (c nonConflictController) Load(router *Router) {
+	r := router.NewRestRouter("/things")
+	r.Get("/list", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) })
+	r.Get("/detail/{id}", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) })
+}
+
+type multiPrefixController struct{}
+
+func (c multiPrefixController) Load(router *Router) {
+	a := router.NewRestRouter("/widgets")
+	a.Get("/", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) })
+	b := router.NewRestRouter("/users")
+	b.Get("/", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) })
+}
+
+func TestCommonRoutePrefix_SharedPrefixNoConflict(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{nonConflictController{}})
+	assert.Equal(t, "/things", commonRoutePrefix(router.routes))
+}
+
+func TestCommonRoutePrefix_FallsBackOnWildcardConflict(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{DocController{}})
+	assert.Equal(t, "", commonRoutePrefix(router.routes))
+}
+
+func TestCommonRoutePrefix_NoSharedPrefix(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{multiPrefixController{}})
+	assert.Equal(t, "", commonRoutePrefix(router.routes))
+}
+
+func TestCommonRoutePrefix_IgnoresExcludedRoutes(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{
+		HealthcheckController{},
+		nonConflictController{},
+	})
+	assert.Equal(t, "/things", commonRoutePrefix(router.routes))
+}
+
+func TestOpenAPI_AutoPrefixesSpecAndDocs(t *testing.T) {
+	s := NewServer(nonConflictController{})
+	s.Port = 8094
+	s.ExitOnFatal = false
+	s.UseHealthcheck()
+	s.UseOpenAPI(OpenAPIConfig{Title: "T", Version: "1"})
+	go s.Start()
+
+	<-time.NewTimer(time.Millisecond * 200).C
+
+	res, err := http.Get("http://localhost:8094/api/things/openapi.json")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	res.Body.Close()
+
+	res, err = http.Get("http://localhost:8094/api/things/docs")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	res.Body.Close()
+}
+
+func TestOpenAPI_ExplicitSpecPathOverridesAutoPrefix(t *testing.T) {
+	s := NewServer(nonConflictController{})
+	s.Port = 8095
+	s.ExitOnFatal = false
+	s.UseOpenAPI(OpenAPIConfig{
+		Title:    "T",
+		Version:  "1",
+		SpecPath: "/openapi.json",
+		DocsPath: "/docs",
+	})
+	go s.Start()
+
+	<-time.NewTimer(time.Millisecond * 200).C
+
+	res, err := http.Get("http://localhost:8095/api/openapi.json")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	res.Body.Close()
+}
+
 func TestOpenAPI_DiscardedReturnValueStillRegisters(t *testing.T) {
 	router := newRouter("/api", nil, []IHttpController{simpleController{}})
 

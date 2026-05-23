@@ -9,5 +9,5 @@ func (c HealthcheckController) healthcheck(ctx HTTPContext) {
 
 func (c HealthcheckController) Load(router *Router) {
 	r := router.NewRestRouter("/healthcheck")
-	r.Get("", c.healthcheck)
+	r.Get("", c.healthcheck).ExcludeFromSpec()
 }
