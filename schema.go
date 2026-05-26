@@ -10,9 +10,23 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
+// OpenAPISchemaProvider lets a type declare its own OpenAPI schema fragment.
+// requiem honors it before falling back to reflection, so types whose JSON
+// shape can't be inferred from their Go declaration (custom MarshalJSON,
+// JSON-encoded string aliases, etc.) can describe themselves accurately.
+type OpenAPISchemaProvider interface {
+	OpenAPISchema() map[string]interface{}
+}
+
+var openAPISchemaProviderType = reflect.TypeOf((*OpenAPISchemaProvider)(nil)).Elem()
+
 func (db *docBuilder) schemaFor(t reflect.Type) map[string]interface{} {
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
+	}
+
+	if schema, ok := customSchemaFor(t); ok {
+		return schema
 	}
 
 	if t == timeType {
@@ -51,6 +65,22 @@ func (db *docBuilder) schemaFor(t reflect.Type) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
+// customSchemaFor returns a schema produced by OpenAPISchemaProvider when the
+// type (or its pointer) implements it. Skips reflect.Interface to avoid the
+// special case of zero-value interface instantiation.
+func customSchemaFor(t reflect.Type) (map[string]interface{}, bool) {
+	if t.Kind() == reflect.Interface {
+		return nil, false
+	}
+	if t.Implements(openAPISchemaProviderType) {
+		return reflect.New(t).Elem().Interface().(OpenAPISchemaProvider).OpenAPISchema(), true
+	}
+	if reflect.PointerTo(t).Implements(openAPISchemaProviderType) {
+		return reflect.New(t).Interface().(OpenAPISchemaProvider).OpenAPISchema(), true
+	}
+	return nil, false
+}
+
 func (db *docBuilder) structRef(t reflect.Type) map[string]interface{} {
 	name := t.Name()
 	if name == "" {
@@ -69,41 +99,59 @@ func (db *docBuilder) buildStructSchema(t reflect.Type) map[string]interface{} {
 	properties := map[string]interface{}{}
 	required := []string{}
 
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		if !f.IsExported() {
-			continue
-		}
-
-		jsonTag := f.Tag.Get("json")
-		if jsonTag == "-" {
-			continue
-		}
-
-		name := f.Name
-		omitEmpty := false
-		if jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
-				name = parts[0]
+	var visit func(t reflect.Type)
+	visit = func(t reflect.Type) {
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			if !f.IsExported() {
+				continue
 			}
-			for _, p := range parts[1:] {
-				if p == "omitempty" {
-					omitEmpty = true
+
+			jsonTag := f.Tag.Get("json")
+			if jsonTag == "-" {
+				continue
+			}
+
+			// Anonymous embedded struct with no explicit json tag: Go's
+			// encoding/json promotes its exported fields to the parent. Mirror
+			// that in the schema so the generated client sees a flat object.
+			if f.Anonymous && jsonTag == "" {
+				ft := f.Type
+				for ft.Kind() == reflect.Ptr {
+					ft = ft.Elem()
+				}
+				if ft.Kind() == reflect.Struct {
+					visit(ft)
+					continue
 				}
 			}
-		}
 
-		schema := db.schemaFor(f.Type)
-		if _, isRef := schema["$ref"]; !isRef {
-			applyValidateTag(schema, f.Tag.Get("validate"))
-		}
-		properties[name] = schema
+			name := f.Name
+			omitEmpty := false
+			if jsonTag != "" {
+				parts := strings.Split(jsonTag, ",")
+				if parts[0] != "" {
+					name = parts[0]
+				}
+				for _, p := range parts[1:] {
+					if p == "omitempty" {
+						omitEmpty = true
+					}
+				}
+			}
 
-		if !omitEmpty && hasValidateRule(f.Tag.Get("validate"), "required") {
-			required = append(required, name)
+			schema := db.schemaFor(f.Type)
+			if _, isRef := schema["$ref"]; !isRef {
+				applyValidateTag(schema, f.Tag.Get("validate"))
+			}
+			properties[name] = schema
+
+			if !omitEmpty && hasValidateRule(f.Tag.Get("validate"), "required") {
+				required = append(required, name)
+			}
 		}
 	}
+	visit(t)
 
 	out := map[string]interface{}{
 		"type":       "object",

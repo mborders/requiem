@@ -400,3 +400,111 @@ func (c simpleController) Load(router *Router) {
 		ctx.SendStatus(http.StatusOK)
 	})
 }
+
+type customSchemaScalar string
+
+func (c customSchemaScalar) OpenAPISchema() map[string]interface{} {
+	return map[string]interface{}{"type": "string", "format": "date"}
+}
+
+type customSchemaContainer struct {
+	When customSchemaScalar `json:"when" validate:"required"`
+}
+
+type customSchemaController struct{}
+
+func (c customSchemaController) Load(router *Router) {
+	r := router.NewRestRouter("/custom")
+	r.Get("/", func(ctx HTTPContext) {
+		ctx.SendJSON(customSchemaContainer{})
+	}).Returns(200, customSchemaContainer{}, "OK")
+}
+
+func TestOpenAPI_OpenAPISchemaProvider(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{customSchemaController{}})
+
+	var spec map[string]interface{}
+	json.Unmarshal(buildDoc(OpenAPIConfig{Title: "T", Version: "1"}, router.routes), &spec)
+
+	schemas := spec["components"].(map[string]interface{})["schemas"].(map[string]interface{})
+	props := schemas["customSchemaContainer"].(map[string]interface{})["properties"].(map[string]interface{})
+	when := props["when"].(map[string]interface{})
+
+	assert.Equal(t, "string", when["type"])
+	assert.Equal(t, "date", when["format"])
+	// The named scalar type must not leak into components.schemas as a $ref —
+	// OpenAPISchema is the source of truth for its representation.
+	_, hasScalarSchema := schemas["customSchemaScalar"]
+	assert.False(t, hasScalarSchema)
+}
+
+type EmbeddedSummary struct {
+	ID    string `json:"id" validate:"required"`
+	Title string `json:"title" validate:"required"`
+}
+
+type WithEmbedded struct {
+	EmbeddedSummary
+	Children []string `json:"children" validate:"required"`
+}
+
+type embeddedController struct{}
+
+func (c embeddedController) Load(router *Router) {
+	r := router.NewRestRouter("/embedded")
+	r.Get("/", func(ctx HTTPContext) {
+		ctx.SendJSON(WithEmbedded{})
+	}).Returns(200, WithEmbedded{}, "OK")
+}
+
+func TestOpenAPI_FlattensEmbeddedStructs(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{embeddedController{}})
+
+	var spec map[string]interface{}
+	json.Unmarshal(buildDoc(OpenAPIConfig{Title: "T", Version: "1"}, router.routes), &spec)
+
+	schemas := spec["components"].(map[string]interface{})["schemas"].(map[string]interface{})
+	schema := schemas["WithEmbedded"].(map[string]interface{})
+	props := schema["properties"].(map[string]interface{})
+
+	// Embedded struct's fields surface on the parent, not as a nested object.
+	assert.Contains(t, props, "id")
+	assert.Contains(t, props, "title")
+	assert.Contains(t, props, "children")
+	assert.NotContains(t, props, "EmbeddedSummary")
+
+	required := schema["required"].([]interface{})
+	assert.Contains(t, required, "id")
+	assert.Contains(t, required, "title")
+	assert.Contains(t, required, "children")
+}
+
+type TaggedEmbedWrapper struct {
+	EmbeddedSummary `json:"summary"`
+	Children        []string `json:"children"`
+}
+
+type taggedEmbedController struct{}
+
+func (c taggedEmbedController) Load(router *Router) {
+	r := router.NewRestRouter("/tagged")
+	r.Get("/", func(ctx HTTPContext) {
+		ctx.SendJSON(TaggedEmbedWrapper{})
+	}).Returns(200, TaggedEmbedWrapper{}, "OK")
+}
+
+func TestOpenAPI_EmbeddedWithExplicitJSONTagStaysNested(t *testing.T) {
+	router := newRouter("/api", nil, []IHttpController{taggedEmbedController{}})
+
+	var spec map[string]interface{}
+	json.Unmarshal(buildDoc(OpenAPIConfig{Title: "T", Version: "1"}, router.routes), &spec)
+
+	schemas := spec["components"].(map[string]interface{})["schemas"].(map[string]interface{})
+	props := schemas["TaggedEmbedWrapper"].(map[string]interface{})["properties"].(map[string]interface{})
+
+	// Explicit json tag on the embedded field keeps it as a nested property,
+	// matching encoding/json's behavior.
+	assert.Contains(t, props, "summary")
+	assert.NotContains(t, props, "id")
+	assert.NotContains(t, props, "title")
+}
