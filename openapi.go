@@ -39,6 +39,7 @@ type Route struct {
 	deprecated   bool
 	excluded     bool
 	mcpExcluded  bool
+	mcpIncluded  bool
 	mcpToolName  string
 }
 

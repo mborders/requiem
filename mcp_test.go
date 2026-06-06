@@ -368,3 +368,47 @@ func (headerParamController) Load(router *Router) {
 		ctx.SendJSON(map[string]string{"trace": ctx.Request.Header.Get("X-Trace")})
 	}).Header("X-Trace", "string", true, "trace id")
 }
+
+// optInController exercises allowlist mode: one opted-in route, one left out, and
+// one that opts in but also excludes (exclude must win).
+type optInController struct{}
+
+func (optInController) Load(router *Router) {
+	r := router.NewRestRouter("/items")
+	r.Get("/", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }).
+		Summary("List items").IncludeInMCP()
+	r.Get("/hidden", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }).
+		Summary("Hidden")
+	r.Get("/both", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }).
+		Summary("Exclude wins").IncludeInMCP().ExcludeFromMCP()
+}
+
+// In allowlist mode only IncludeInMCP routes are exposed, and ExcludeFromMCP still wins.
+func TestMCP_OptIn_AllowlistsExplicitRoutes(t *testing.T) {
+	c := &mcpController{cfg: MCPConfig{Path: "/mcp", OptIn: true}}
+	_ = newRouter(defaultBasePath, nil, []IHttpController{optInController{}, c})
+	c.build()
+
+	names := map[string]bool{}
+	for _, tl := range c.tools {
+		names[tl.name] = true
+	}
+	assert.Equal(t, map[string]bool{"get_items": true}, names)
+}
+
+// Without OptIn the default exposes every route; IncludeInMCP is a harmless no-op,
+// but ExcludeFromMCP is still honored.
+func TestMCP_OptIn_DefaultExposesEverything(t *testing.T) {
+	c := &mcpController{cfg: MCPConfig{Path: "/mcp"}}
+	_ = newRouter(defaultBasePath, nil, []IHttpController{optInController{}, c})
+	c.build()
+
+	names := map[string]bool{}
+	for _, tl := range c.tools {
+		names[tl.name] = true
+	}
+	assert.Contains(t, names, "get_items")
+	assert.Contains(t, names, "get_items_hidden")
+	assert.NotContains(t, names, "get_items_both")
+	assert.Len(t, c.tools, 2)
+}

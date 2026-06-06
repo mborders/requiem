@@ -49,11 +49,23 @@ type MCPConfig struct {
 	// Path overrides the endpoint path. Defaults to the API's common route prefix
 	// plus "/mcp" (e.g. "/widgets/mcp").
 	Path string
+	// OptIn flips the addon to allowlist mode: when true, no route is exposed
+	// unless it is explicitly opted in with Route.IncludeInMCP. The default (false)
+	// keeps the expose-everything behavior. ExcludeFromMCP always wins over both.
+	OptIn bool
 }
 
-// ExcludeFromMCP hides this route from the MCP tool list.
+// ExcludeFromMCP hides this route from the MCP tool list. It takes precedence over
+// IncludeInMCP and over MCPConfig.OptIn.
 func (rt *Route) ExcludeFromMCP() *Route {
 	rt.mcpExcluded = true
+	return rt
+}
+
+// IncludeInMCP exposes this route when the addon runs in allowlist mode
+// (MCPConfig.OptIn). It is a no-op in the default expose-everything mode.
+func (rt *Route) IncludeInMCP() *Route {
+	rt.mcpIncluded = true
 	return rt
 }
 
@@ -222,6 +234,10 @@ func (c *mcpController) build() {
 		used := map[string]bool{}
 		for _, rt := range c.router.routes {
 			if rt.mcpExcluded {
+				continue
+			}
+			// In allowlist mode, a route must opt in explicitly. Exclude still wins.
+			if c.cfg.OptIn && !rt.mcpIncluded {
 				continue
 			}
 			name := rt.mcpToolName
