@@ -369,6 +369,110 @@ func (headerParamController) Load(router *Router) {
 	}).Header("X-Trace", "string", true, "trace id")
 }
 
+// authzController exposes two tools: an open one and a "finance" one guarded by an
+// Authorizer that requires the caller's context to carry canFinance=true. The
+// Authenticate hook reads an X-Role header and populates that attribute.
+type authzController struct{}
+
+func (authzController) Load(router *Router) {
+	r := router.NewRestRouter("/reports")
+	r.Get("/usage", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }).
+		Summary("Usage")
+	r.Get("/finance", func(ctx HTTPContext) { ctx.SendStatus(http.StatusOK) }).
+		Summary("Finance").
+		Authorize(func(ctx HTTPContext) bool {
+			ok, _ := ctx.GetAttribute("canFinance").(bool)
+			return ok
+		})
+}
+
+// authzAuthenticate is the MCPConfig.Authenticate hook: a missing role is rejected
+// (so the endpoint is gated), and a "finance" role grants the canFinance attribute.
+func authzAuthenticate(ctx HTTPContext) bool {
+	role := ctx.Request.Header.Get("X-Role")
+	if role == "" {
+		ctx.SendStatus(http.StatusUnauthorized)
+		return false
+	}
+	ctx.SetAttribute("canFinance", role == "finance")
+	return true
+}
+
+func authzRouter() *Router {
+	// Explicit Path: authzController's routes share the /reports prefix, so
+	// commonRoutePrefix would otherwise mount MCP at /api/reports/mcp.
+	return newRouter(defaultBasePath, nil, []IHttpController{
+		authzController{},
+		&mcpController{cfg: MCPConfig{Name: "Reports", Version: "1.0.0", Path: "/mcp", Authenticate: authzAuthenticate}},
+	})
+}
+
+// With Authenticate set, tools/list is filtered per caller: a base caller sees only
+// the unguarded tool, while a finance caller also sees the guarded one.
+func TestMCP_Authorize_FiltersToolsListPerCaller(t *testing.T) {
+	r := authzRouter()
+
+	base := rpc(t, r, "tools/list", nil, map[string]string{"X-Role": "viewer"})
+	assert.Nil(t, base.Error)
+	baseNames := toolNameSet(base)
+	assert.Contains(t, baseNames, "get_reports_usage")
+	assert.NotContains(t, baseNames, "get_reports_finance")
+
+	fin := rpc(t, r, "tools/list", nil, map[string]string{"X-Role": "finance"})
+	assert.Nil(t, fin.Error)
+	finNames := toolNameSet(fin)
+	assert.Contains(t, finNames, "get_reports_usage")
+	assert.Contains(t, finNames, "get_reports_finance")
+}
+
+// tools/list and tools/call require authentication when Authenticate is configured;
+// an unauthenticated caller gets a transport-level 401 with no JSON-RPC body.
+func TestMCP_Authenticate_GatesListAndCall(t *testing.T) {
+	r := authzRouter()
+
+	for _, method := range []string{"tools/list", "tools/call"} {
+		body, _ := json.Marshal(map[string]interface{}{
+			"jsonrpc": "2.0", "id": 1, "method": method,
+			"params": map[string]interface{}{"name": "get_reports_usage"},
+		})
+		rec := rawRPC(t, r, body, nil) // no X-Role -> unauthenticated
+		assert.Equal(t, http.StatusUnauthorized, rec.Code, "%s should be gated", method)
+		assert.Empty(t, strings.TrimSpace(rec.Body.String()), "%s 401 should have no body", method)
+	}
+}
+
+// initialize and ping remain reachable without authentication so a client can
+// negotiate the protocol before presenting credentials.
+func TestMCP_Authenticate_InitializeAndPingOpen(t *testing.T) {
+	r := authzRouter()
+
+	init := rpc(t, r, "initialize", map[string]interface{}{"protocolVersion": "2025-06-18"}, nil)
+	assert.Nil(t, init.Error)
+	ping := rpc(t, r, "ping", nil, nil)
+	assert.Nil(t, ping.Error)
+}
+
+// Without Authenticate there is no caller to filter against, so an Authorizer on a
+// route is ignored and the full list is returned (legacy behavior preserved).
+func TestMCP_Authorize_IgnoredWithoutAuthenticate(t *testing.T) {
+	c := &mcpController{cfg: MCPConfig{Name: "Reports", Version: "1.0.0", Path: "/mcp"}}
+	r := newRouter(defaultBasePath, nil, []IHttpController{authzController{}, c})
+
+	resp := rpc(t, r, "tools/list", nil, nil)
+	names := toolNameSet(resp)
+	assert.Contains(t, names, "get_reports_usage")
+	assert.Contains(t, names, "get_reports_finance")
+}
+
+func toolNameSet(resp rpcResponse) map[string]bool {
+	names := map[string]bool{}
+	tools := resp.Result.(map[string]interface{})["tools"].([]interface{})
+	for _, tv := range tools {
+		names[tv.(map[string]interface{})["name"].(string)] = true
+	}
+	return names
+}
+
 // optInController exercises allowlist mode: one opted-in route, one left out, and
 // one that opts in but also excludes (exclude must win).
 type optInController struct{}

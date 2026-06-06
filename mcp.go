@@ -53,6 +53,11 @@ type MCPConfig struct {
 	// unless it is explicitly opted in with Route.IncludeInMCP. The default (false)
 	// keeps the expose-everything behavior. ExcludeFromMCP always wins over both.
 	OptIn bool
+	// Authenticate optionally gates tools/list and tools/call: the caller must pass
+	// it, and the context it populates (e.g. an authenticated user) is what each
+	// route's Authorizer is evaluated against to filter the tool list. When nil,
+	// the endpoint stays unauthenticated and the list is unfiltered (legacy).
+	Authenticate HTTPInterceptor
 }
 
 // ExcludeFromMCP hides this route from the MCP tool list. It takes precedence over
@@ -75,10 +80,24 @@ func (rt *Route) MCPTool(name string) *Route {
 	return rt
 }
 
+// Authorizer reports whether an already-authenticated caller may use a route. It
+// is a pure predicate: it reads identity from the context (set by MCPConfig.Authenticate)
+// and must not write to the response.
+type Authorizer func(ctx HTTPContext) bool
+
+// Authorize attaches a per-caller authorization predicate to this route. When
+// MCPConfig.Authenticate is set, tools/list returns a route's tool only if its
+// Authorizer passes for the caller; a route without one is always visible.
+func (rt *Route) Authorize(a Authorizer) *Route {
+	rt.authorizer = a
+	return rt
+}
+
 type mcpTool struct {
 	name        string
 	description string
 	inputSchema map[string]interface{}
+	authorizer  Authorizer
 	route       *Route
 }
 
@@ -157,7 +176,18 @@ func (c *mcpController) handleRPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, rerr := c.dispatch(r, req)
+	// tools/list and tools/call are gated when an Authenticate hook is configured;
+	// initialize/ping stay open for protocol negotiation. The populated context is
+	// what tools/list filters against and what tools/call dispatches with.
+	ctx := c.newContext(r)
+	if mcpRequiresAuth(req.Method) && c.cfg.Authenticate != nil {
+		if !c.cfg.Authenticate(ctx) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	}
+
+	result, rerr := c.dispatch(ctx, req)
 
 	if notification {
 		w.WriteHeader(http.StatusAccepted)
@@ -173,18 +203,36 @@ func (c *mcpController) handleRPC(w http.ResponseWriter, r *http.Request) {
 // dispatch routes a validated JSON-RPC request to its handler, returning either a
 // result or a JSON-RPC error. It never writes to the response, so the caller can
 // uniformly suppress output for notifications.
-func (c *mcpController) dispatch(r *http.Request, req rpcRequest) (interface{}, *rpcError) {
+func (c *mcpController) dispatch(ctx HTTPContext, req rpcRequest) (interface{}, *rpcError) {
 	switch req.Method {
 	case "initialize":
 		return c.initializeResult(req.Params), nil
 	case "ping":
 		return map[string]interface{}{}, nil
 	case "tools/list":
-		return map[string]interface{}{"tools": c.toolList()}, nil
+		return map[string]interface{}{"tools": c.toolList(ctx)}, nil
 	case "tools/call":
-		return c.invoke(r, req.Params)
+		return c.invoke(ctx.Request, req.Params)
 	default:
 		return nil, &rpcError{Code: -32601, Message: fmt.Sprintf("Method not found: %s", req.Method)}
+	}
+}
+
+// mcpRequiresAuth reports the methods gated by MCPConfig.Authenticate. initialize
+// and ping stay open so a client can negotiate the protocol before presenting
+// credentials; the tool surface itself is never exposed without authentication.
+func mcpRequiresAuth(method string) bool {
+	return method == "tools/list" || method == "tools/call"
+}
+
+// newContext builds a request-scoped context for the JSON-RPC dispatch. The
+// response is a throwaway recorder so an Authenticate hook that writes a status on
+// failure (e.g. 401) doesn't corrupt the real JSON-RPC response.
+func (c *mcpController) newContext(r *http.Request) HTTPContext {
+	return HTTPContext{
+		Request:    r,
+		Response:   &responseRecorder{header: http.Header{}, status: http.StatusOK},
+		attributes: map[string]interface{}{},
 	}
 }
 
@@ -252,6 +300,7 @@ func (c *mcpController) build() {
 				name:        name,
 				description: toolDescription(rt),
 				inputSchema: buildInputSchema(rt),
+				authorizer:  rt.authorizer,
 				route:       rt,
 			})
 		}
@@ -261,10 +310,18 @@ func (c *mcpController) build() {
 	})
 }
 
-func (c *mcpController) toolList() []map[string]interface{} {
+// toolList returns the tool definitions visible to the caller. When Authenticate
+// is configured, a tool with an Authorizer is included only when it passes for ctx
+// (a tool without one is always visible). Without Authenticate there is no caller
+// identity to filter against, so the full list is returned (legacy behavior).
+func (c *mcpController) toolList(ctx HTTPContext) []map[string]interface{} {
 	c.build()
+	filter := c.cfg.Authenticate != nil
 	out := make([]map[string]interface{}, 0, len(c.tools))
 	for _, t := range c.tools {
+		if filter && t.authorizer != nil && !t.authorizer(ctx) {
+			continue
+		}
 		out = append(out, map[string]interface{}{
 			"name":        t.name,
 			"description": t.description,

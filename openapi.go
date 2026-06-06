@@ -41,6 +41,7 @@ type Route struct {
 	mcpExcluded  bool
 	mcpIncluded  bool
 	mcpToolName  string
+	authorizer   Authorizer
 }
 
 type responseSpec struct {
