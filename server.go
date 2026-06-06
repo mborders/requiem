@@ -21,6 +21,7 @@ type Server struct {
 	ExitOnFatal        bool
 	healthcheckEnabled bool
 	openapiEnabled     bool
+	mcpEnabled         bool
 	db                 *gorm.DB
 	controllers        []IHttpController
 }
@@ -62,6 +63,19 @@ func (s *Server) GetOpenAPISpec() []byte {
 		}
 	}
 	return nil
+}
+
+// UseMCP enables an optional Model Context Protocol (MCP) endpoint that exposes
+// the server's registered REST routes as MCP tools. It is purely additive: when
+// called, an mcpController is appended to the server's controllers and serves a
+// JSON-RPC 2.0 endpoint (default: the API's namespace + "/mcp"). Once enabled,
+// every route is exposed by default; opt individual routes out with
+// Route.ExcludeFromMCP.
+func (s *Server) UseMCP(cfg MCPConfig) {
+	if !s.mcpEnabled {
+		s.controllers = append(s.controllers, &mcpController{cfg: cfg})
+		s.mcpEnabled = true
+	}
 }
 
 func (s *Server) AutoMigrate(models ...interface{}) {

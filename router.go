@@ -14,6 +14,7 @@ type Router struct {
 	MuxRouter *mux.Router
 	DB        *gorm.DB
 	routes    []*Route
+	basePath  string
 }
 
 // IHttpController represents a REST API that can be loaded into a router
@@ -58,7 +59,7 @@ func (r *Router) printRoutes() {
 // newRouter initializes a new router starting at the given path
 func newRouter(path string, db *gorm.DB, controllers []IHttpController) *Router {
 	mr := mux.NewRouter().PathPrefix(path).Subrouter()
-	r := &Router{MuxRouter: mr, DB: db, routes: []*Route{}}
+	r := &Router{MuxRouter: mr, DB: db, routes: []*Route{}, basePath: path}
 	r.load(controllers)
 	return r
 }

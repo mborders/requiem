@@ -38,6 +38,8 @@ type Route struct {
 	params       []paramSpec
 	deprecated   bool
 	excluded     bool
+	mcpExcluded  bool
+	mcpToolName  string
 }
 
 type responseSpec struct {
