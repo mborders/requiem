@@ -58,6 +58,9 @@ type MCPConfig struct {
 	// route's Authorizer is evaluated against to filter the tool list. When nil,
 	// the endpoint stays unauthenticated and the list is unfiltered (legacy).
 	Authenticate HTTPInterceptor
+	// Guard optionally vets every exposed route when the endpoint is mounted; an
+	// error stops startup, so a route can't be exposed by accident.
+	Guard func(method, path string) error
 }
 
 // ExcludeFromMCP hides this route from the MCP tool list. It takes precedence over
@@ -116,6 +119,17 @@ func (c *mcpController) Load(router *Router) {
 	path := c.cfg.Path
 	if path == "" {
 		path = commonRoutePrefix(router.routes) + defaultMCPPath
+	}
+
+	if c.cfg.Guard != nil {
+		for _, rt := range router.routes {
+			if !c.exposes(rt) {
+				continue
+			}
+			if err := c.cfg.Guard(rt.method, stripPathRegex(rt.path)); err != nil {
+				panic(fmt.Sprintf("requiem: MCP guard rejected %s %s: %v", rt.method, stripPathRegex(rt.path), err))
+			}
+		}
 	}
 
 	router.MuxRouter.HandleFunc(path, c.handleRPC).Methods(http.MethodPost)
@@ -281,11 +295,7 @@ func (c *mcpController) build() {
 		c.index = map[string]*mcpTool{}
 		used := map[string]bool{}
 		for _, rt := range c.router.routes {
-			if rt.mcpExcluded {
-				continue
-			}
-			// In allowlist mode, a route must opt in explicitly. Exclude still wins.
-			if c.cfg.OptIn && !rt.mcpIncluded {
+			if !c.exposes(rt) {
 				continue
 			}
 			name := rt.mcpToolName
@@ -308,6 +318,15 @@ func (c *mcpController) build() {
 			c.index[c.tools[i].name] = &c.tools[i]
 		}
 	})
+}
+
+// exposes reports whether a route becomes a tool. In allowlist mode a route must
+// opt in explicitly; ExcludeFromMCP always wins.
+func (c *mcpController) exposes(rt *Route) bool {
+	if rt.mcpExcluded {
+		return false
+	}
+	return !c.cfg.OptIn || rt.mcpIncluded
 }
 
 // toolList returns the tool definitions visible to the caller. When Authenticate

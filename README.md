@@ -172,6 +172,19 @@ r.Get("/{id}", c.getOne).
 `MCPConfig` defaults:
 - `Path` defaults to the API's common route prefix plus `/mcp`
 - `Instructions` is optional guidance returned during `initialize`
+- `Guard`, when set, is called with each exposed route's method and path as the endpoint is mounted; returning an error panics at startup. Use it to enforce a rule such as "only GET routes are tools":
+
+```go
+s.UseMCP(requiem.MCPConfig{
+    OptIn: true,
+    Guard: func(method, path string) error {
+        if method != http.MethodGet {
+            return fmt.Errorf("only GET routes may be MCP tools")
+        }
+        return nil
+    },
+})
+```
 
 ## DB Connection Environment Variables (if DB is enabled)
 ```
