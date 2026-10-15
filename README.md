@@ -186,6 +186,19 @@ s.UseMCP(requiem.MCPConfig{
 })
 ```
 
+### In-process tool calls
+
+`UseMCP` returns a handle for code that runs its own agent loop inside the service. It lists and calls the same tools without an HTTP round trip, as the caller whose credentials are on the given request: `Authenticate` runs first, `Tools` applies each route's `Authorize` filter, and `Call` only runs tools that caller can see.
+
+```go
+tools := s.UseMCP(requiem.MCPConfig{OptIn: true, Authenticate: auth})
+
+// later, inside a handler
+list, err := tools.Tools(ctx.Request)
+res, err := tools.Call(ctx.Request, "fetch_widget", map[string]interface{}{"id": "42"})
+// res.Text is the route's response body; res.IsError is true for a 4xx/5xx status
+```
+
 ## DB Connection Environment Variables (if DB is enabled)
 ```
 DB_HOST

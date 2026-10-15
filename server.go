@@ -21,7 +21,7 @@ type Server struct {
 	ExitOnFatal        bool
 	healthcheckEnabled bool
 	openapiEnabled     bool
-	mcpEnabled         bool
+	mcp                *mcpController
 	db                 *gorm.DB
 	controllers        []IHttpController
 }
@@ -70,12 +70,13 @@ func (s *Server) GetOpenAPISpec() []byte {
 // called, an mcpController is appended to the server's controllers and serves a
 // JSON-RPC 2.0 endpoint (default: the API's namespace + "/mcp"). Once enabled,
 // every route is exposed by default; opt individual routes out with
-// Route.ExcludeFromMCP.
-func (s *Server) UseMCP(cfg MCPConfig) {
-	if !s.mcpEnabled {
-		s.controllers = append(s.controllers, &mcpController{cfg: cfg})
-		s.mcpEnabled = true
+// Route.ExcludeFromMCP. The returned handle calls the same tools in-process.
+func (s *Server) UseMCP(cfg MCPConfig) *MCP {
+	if s.mcp == nil {
+		s.mcp = &mcpController{cfg: cfg}
+		s.controllers = append(s.controllers, s.mcp)
 	}
+	return &MCP{c: s.mcp}
 }
 
 func (s *Server) AutoMigrate(models ...interface{}) {

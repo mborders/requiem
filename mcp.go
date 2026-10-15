@@ -226,7 +226,7 @@ func (c *mcpController) dispatch(ctx HTTPContext, req rpcRequest) (interface{}, 
 	case "tools/list":
 		return map[string]interface{}{"tools": c.toolList(ctx)}, nil
 	case "tools/call":
-		return c.invoke(ctx.Request, req.Params)
+		return c.invoke(ctx, req.Params)
 	default:
 		return nil, &rpcError{Code: -32601, Message: fmt.Sprintf("Method not found: %s", req.Method)}
 	}
@@ -334,13 +334,9 @@ func (c *mcpController) exposes(rt *Route) bool {
 // (a tool without one is always visible). Without Authenticate there is no caller
 // identity to filter against, so the full list is returned (legacy behavior).
 func (c *mcpController) toolList(ctx HTTPContext) []map[string]interface{} {
-	c.build()
-	filter := c.cfg.Authenticate != nil
-	out := make([]map[string]interface{}, 0, len(c.tools))
-	for _, t := range c.tools {
-		if filter && t.authorizer != nil && !t.authorizer(ctx) {
-			continue
-		}
+	visible := c.visibleTools(ctx)
+	out := make([]map[string]interface{}, 0, len(visible))
+	for _, t := range visible {
 		out = append(out, map[string]interface{}{
 			"name":        t.name,
 			"description": t.description,
@@ -348,6 +344,21 @@ func (c *mcpController) toolList(ctx HTTPContext) []map[string]interface{} {
 		})
 	}
 	return out
+}
+
+func (c *mcpController) visibleTools(ctx HTTPContext) []*mcpTool {
+	c.build()
+	out := make([]*mcpTool, 0, len(c.tools))
+	for i := range c.tools {
+		if c.visible(ctx, &c.tools[i]) {
+			out = append(out, &c.tools[i])
+		}
+	}
+	return out
+}
+
+func (c *mcpController) visible(ctx HTTPContext, t *mcpTool) bool {
+	return c.cfg.Authenticate == nil || t.authorizer == nil || t.authorizer(ctx)
 }
 
 var toolNameSanitize = regexp.MustCompile(`[^a-zA-Z0-9]+`)
@@ -492,7 +503,7 @@ type callParams struct {
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
-func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (map[string]interface{}, *rpcError) {
+func (c *mcpController) invoke(ctx HTTPContext, params json.RawMessage) (map[string]interface{}, *rpcError) {
 	c.build()
 
 	var p callParams
@@ -503,8 +514,20 @@ func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (m
 	if !ok {
 		return nil, &rpcError{Code: -32602, Message: fmt.Sprintf("Unknown tool: %s", p.Name)}
 	}
+	res, rerr := c.call(ctx.Request, tool, p.Arguments)
+	if rerr != nil {
+		return nil, rerr
+	}
+	return map[string]interface{}{
+		"content": []map[string]interface{}{
+			{"type": "text", "text": res.Text},
+		},
+		"isError": res.IsError,
+	}, nil
+}
+
+func (c *mcpController) call(httpReq *http.Request, tool *mcpTool, args map[string]interface{}) (MCPResult, *rpcError) {
 	rt := tool.route
-	args := p.Arguments
 	if args == nil {
 		args = map[string]interface{}{}
 	}
@@ -515,10 +538,10 @@ func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (m
 	for _, name := range extractPathParams(rt.path) {
 		s, ok, rerr := paramValue(args[name])
 		if rerr != nil {
-			return nil, rerr
+			return MCPResult{}, rerr
 		}
 		if !ok {
-			return nil, &rpcError{Code: -32602, Message: fmt.Sprintf("Missing required path parameter: %s", name)}
+			return MCPResult{}, &rpcError{Code: -32602, Message: fmt.Sprintf("Missing required path parameter: %s", name)}
 		}
 		pathValues[name] = s
 	}
@@ -533,7 +556,7 @@ func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (m
 		}
 		s, ok, rerr := paramValue(args[pp.name])
 		if rerr != nil {
-			return nil, rerr
+			return MCPResult{}, rerr
 		}
 		if !ok {
 			continue
@@ -555,9 +578,9 @@ func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (m
 		body, _ = json.Marshal(args["body"])
 	}
 
-	synthReq, err := http.NewRequest(rt.method, target, bytes.NewReader(body))
+	synthReq, err := http.NewRequestWithContext(httpReq.Context(), rt.method, target, bytes.NewReader(body))
 	if err != nil {
-		return nil, &rpcError{Code: -32603, Message: "Failed to build request"}
+		return MCPResult{}, &rpcError{Code: -32603, Message: "Failed to build request"}
 	}
 	synthReq.Header.Set("Content-Type", "application/json")
 	// Forward headers from the incoming MCP request so auth interceptors keep
@@ -583,12 +606,7 @@ func (c *mcpController) invoke(httpReq *http.Request, params json.RawMessage) (m
 	if text == "" {
 		text = http.StatusText(rec.status)
 	}
-	return map[string]interface{}{
-		"content": []map[string]interface{}{
-			{"type": "text", "text": text},
-		},
-		"isError": rec.status >= 400,
-	}, nil
+	return MCPResult{Text: text, IsError: rec.status >= 400}, nil
 }
 
 // substitutePathParams replaces {name} / {name:regex} placeholders with their
